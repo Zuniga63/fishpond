@@ -1,0 +1,114 @@
+/* Librería de Overlay Scroll BAR */
+@import '../../theme/plugins/overlayScrollbars/css/OverlayScrollbars.css';
+
+/* Estilos de la plantilla Admin Lte */
+@import '../../theme/dist/css/adminlte.css';
+
+/* Estilos de Toastr */
+@import '../../../node_modules/toastr/build/toastr.css';
+
+/********************************************************************************************/
+/*                                VARIABLES DEL DOCUMENTO                                   */
+/********************************************************************************************/
+:root {
+  --secondary: #6c757d;
+  --successlight: #28a746ce;
+  --dangerlight: #dc3546ce;
+  --clouds: #ecf0f1;
+  --z-preload: 1100;
+}
+
+.bg-danger-light{
+  background-color: var(--dangerlight);
+  color: var(--white);
+}
+
+.bg-success-light{
+  background-color: var(--successlight);
+  color: var(--white);
+}
+/* 
+  Regla para agregar un asterisco rojo 
+  delante de un campo obligatorio
+*/
+.required:after{
+  content: " *";
+  color: #e73d4a;
+}
+
+.btn-action-table{
+  cursor: pointer;
+  border: none;
+  background: 0;
+  padding: 0 0 0 5px;
+  font-size: 14px !important;
+  line-height: 1.5;
+  /* opacity: 1; */
+}
+
+.width70{
+  width: 70px !important;
+}
+
+.pl-10{
+  padding-left: 10px !important;
+}
+
+.pl-20{
+  padding-left: 20px !important;
+}
+
+.pl-30{
+  padding-left: 30px !important;
+}
+
+.pl-40{
+  padding-left: 40px !important;
+}
+
+/* --------------------------------------------------------------------------------- */
+/*                        ESTILOS DEL PRELOADER                                        */
+/* --------------------------------------------------------------------------------- */
+.preloader {
+  display: none;
+  position: fixed;
+  z-index: var(--z-preload);
+  /* padding-top: 100px; */
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  overflow: auto;
+  background-color: var(--dark);
+}
+
+.preloader.show {
+  display: block;
+}
+
+.loader {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: auto;
+  width: 70px;
+  height: 70px;
+  border: 10px solid var(--secondary);
+  border-top: 10px solid var(--clouds);
+  border-radius: 50%;
+  animation-name: rotate;
+  animation-duration: 2s;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

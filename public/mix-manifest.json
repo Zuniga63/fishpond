@@ -1,0 +1,10 @@
+{
+    "/js/app.js": "/js/app.js",
+    "/js/admin/main.js": "/js/admin/main.js",
+    "/css/admin/main.css": "/css/admin/main.css",
+    "/css/fontawesome-free/all.css": "/css/fontawesome-free/all.css",
+    "/css/app.css": "/css/app.css",
+    "/css/admin/jquery.nestable.css": "/css/admin/jquery.nestable.css",
+    "/js/admin/all.js": "/js/admin/all.js",
+    "/js/admin/jquery.nestable.js": "/js/admin/jquery.nestable.js"
+}
