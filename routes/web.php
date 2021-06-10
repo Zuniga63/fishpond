@@ -17,13 +17,15 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-  return view('welcome');
-});
+// Route::get('/', function () {
+//   return view('welcome');
+// });
 
-Route::middleware(['auth:sanctum', 'verified'])->get('/dashboard', function () {
-  return view('dashboard');
-})->name('dashboard');
+// Route::middleware(['auth:sanctum', 'verified'])->get('/dashboard', function () {
+//   return view('dashboard');
+// })->name('dashboard');
+
+Route::redirect('/', 'admin');
 
 /**
 |-------------------------------------------------------------------------------
@@ -47,10 +49,10 @@ Route::middleware(['auth:sanctum', 'verified', 'adminPanel'])
      * Las rutas listadas aquí solo son accesibles por
      * los administradores del sistema
      */
-    Route::middleware('admin')->group( function(){
+    Route::middleware('admin')->group(function () {
       Route::get('/usuarios/{id?}', UsersComponent::class)->name('users')->whereNumber('id');
       Route::get('/permisos', PermissionComponent::class)->name('permissions');
       Route::get('/roles', RoleComponent::class)->name('roles');
       Route::get('/menus', MenuComponent::class)->name('menus');
-    });//.end group of admin
+    }); //.end group of admin
   });//.end admin routes
