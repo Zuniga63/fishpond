@@ -30,7 +30,10 @@ mix.js('resources/js/app.js', 'public/js')
     'resources/theme/plugins/overlayScrollbars/js/jquery.overlayScrollbars.js',
     'resources/theme/dist/js/adminlte.js'
   ], 'public/js/admin/all.js').sourceMaps()
-  .scripts('resources/js/admin/jquery.nestable.js', 'public/js/admin/jquery.nestable.js').sourceMaps();
+  .scripts('resources/js/admin/jquery.nestable.js', 'public/js/admin/jquery.nestable.js').sourceMaps()
+
+  //Codigo para el componente del estanque
+  .js('resources/js/admin/fishpond-component/app.js', 'public/js/admin/fishpond-component/app.js').sourceMaps();
 
 if (mix.inProduction()) {
   mix.version();
