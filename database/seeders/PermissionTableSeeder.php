@@ -53,6 +53,11 @@ class PermissionTableSeeder extends Seeder
       ['name' => 'Asignar Menus', 'action' => 'assign_menu', 'order' => 21],
       ['name' => 'Ordenar Menus', 'action' => 'order_menu', 'order' => 22],
 
+      /**
+       * PERMISOS PARA ADMINISTRAR LOS ESTANQUES
+       */
+      ["name" => "Crear Nuevo Estanque", "action" => "create_fishpond", "order" => 23],
+      ["name" => "Actualizar Estanque", "action" => "update_fishpond", "order" => 24],
     ];
 
     foreach ($permissions as $data) {

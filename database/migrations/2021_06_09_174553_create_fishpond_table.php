@@ -15,12 +15,19 @@ class CreateFishpondTable extends Migration
   {
     Schema::create('fishpond', function (Blueprint $table) {
       $table->id();
-      $table->string('name', 50);
-      $table->float('volume')->nullable();                    //[m3]
-      $table->float('area')->nullable();                      //[m2]
-      $table->unsignedSmallInteger('capacity')->nullable();
+      $table->foreignId('user_id')->nullable()->constrained('user')->onDelete('SET NULL');
+      $table->string('name', 20);
+      $table->enum('type', ['circular', 'rectangular'])->default('rectangular');
+      $table->unsignedFloat('width', 5, 2)->nullable();                            //[m] {0.01 - 999.99}
+      $table->unsignedFloat('long', 5, 2)->nullable();                             //[m] {0.01 - 999.99}
+      $table->unsignedFloat('max_height', 3, 2)->nullable();                       //[m] {0.01 - 9.99}
+      $table->unsignedFloat('effective_height', 3, 2)->nullable();                 //[m] {0.01 - 9.99}
+      $table->unsignedFloat('diameter', 5, 2)->nullable();                            //[m] {0.01 - 999.99}
+      $table->unsignedSmallInteger('capacity')->nullable();                        //[und] {0 - 65535}
       $table->boolean('in_use')->default(false);
       $table->timestamps();
+      $table->charset = 'utf8mb4';
+      $table->collation = 'utf8mb4_spanish_ci';
     });
   }
 
