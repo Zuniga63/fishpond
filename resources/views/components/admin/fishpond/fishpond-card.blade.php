@@ -7,8 +7,8 @@
     }"
   >
     <!-- Nombre del estanque -->
-    <header class="card-header">
-      <div class="d-flex justify-content-between">
+    <header class="card-header p-2">
+      <div class="d-flex justify-content-between align-items-center">
         <h5 class="text-left p-0 m-0" x-text="fishpond.name"></h5>
         <div class="">
           <a href="javascript:;" class="btn btn-info btn-sm mr-1" x-on:click.stop="editFishpond(fishpond)"><i class="fas fa-edit"></i></a>
@@ -80,7 +80,7 @@
 
             {{-- CAPACIDAD POR AREA --}}
             <template x-if="fishpond.area">
-              <div class="d-flex justify-content-between">
+              <div class="d-flex justify-content-between" title="Peces por unidad de área">
                 <p class="m-0 text-bold text-sm">Densidad:</p>
                 <p class="m-0 text-sm">
                   <span x-text="fishpond.capacityByArea"></span>
@@ -119,21 +119,19 @@
             {{-- VOLUMENES --}}
             <template x-if="fishpond.effectiveVolume || fishpond.maxVolume">
               <div class="d-flex justify-content-between">
-                <p class="m-0 text-bold text-sm">Vol:</p>
+                <p class="m-0 text-bold text-sm">Vol <span class="text-xs">[m<sup>3</sup>]</span>:</p>
                 <p class="m-0 text-sm">
                   <span x-text="fishpond.effectiveVolume"></span>
-                  <span class="text-xs" x-show="fishpond.effectiveVolume">m<sup>3</sup></span>
                   {{-- VOLUMEN MAXIMO --}}
                   <span class="text-xs" x-show="fishpond.effectiveVolume && fishpond.maxVolume"> - </span>
                   <span x-text="fishpond.maxVolume"></span>
-                  <span class="text-xs" x-show="fishpond.maxVolume">m<sup>3</sup></span>
                 </p>
               </div>
             </template>           
 
             {{-- CAPACIDAD POR VOLUMEN --}}
             <template x-if="fishpond.area">
-              <div class="d-flex justify-content-between">
+              <div class="d-flex justify-content-between" title="Peces por unidad de volumen">
                 <p class="m-0 text-bold text-sm">Densidad:</p>
                 <p class="m-0 text-sm">
                   <span x-text="fishpond.capacityByVolume"></span>

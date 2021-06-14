@@ -19,7 +19,7 @@
       </div>
     </div>
 
-    <div x-show="!updatingModel">
+    <div x-show="!updatingModel" class="pb-5">
       <x-admin.fishpond.fishpond-card/>
     </div>
 
