@@ -220,12 +220,12 @@
           </div>
         </div>
         <div x-show="register">
-          <span x-show="!waiting">Registra</span>
-          <span x-show="waiting">Registrando</span>
+          <span x-show="!waiting">Registrar</span>
+          <span x-show="waiting">Registrando...</span>
         </div>
         <div x-show="updating">
           <span x-show="!waiting">Actualizar</span>
-          <span x-show="waiting">Actualizando</span>
+          <span x-show="waiting">Actualizando...</span>
         </div>
       </div>
     </button>
