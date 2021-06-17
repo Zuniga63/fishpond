@@ -11,4 +11,8 @@ class Fishpond extends Model
   protected $table = 'fishpond';
   protected $fillable = ['user_id', 'name', 'type', 'width', 'long', 'max_height', 'effective_height', 'diameter', 'capacity'];
   protected $guarded = ['id'];
+
+  public function costs(){
+    return $this->hasMany(FishpondCost::class);
+  }
 }

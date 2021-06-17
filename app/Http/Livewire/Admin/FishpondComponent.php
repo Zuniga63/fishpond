@@ -3,7 +3,9 @@
 namespace App\Http\Livewire\Admin;
 
 use App\Models\Fishpond;
+use App\Models\FishpondCost;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
@@ -35,6 +37,113 @@ class FishpondComponent extends Component
     return $data;
   }
 
+  public function getFishponds()
+  {
+    $result = [];
+    $userId = session()->get('userId');
+
+    //Se recuperan los datos
+    $data = Fishpond::with('costs')->orderBy('created_at')->where('user_id', $userId)->get();
+    foreach ($data as $record) {
+      $result[] = $this->buildFishpond($record);
+    }
+
+    return $result;
+  }
+
+  /**
+   * Este metodo se encarga de crear las instancias de los 
+   * estanques que son utilizadas por el componente
+   */
+  protected function buildFishpond($data)
+  {
+    $type = $data->type;
+    $width = $data->width ? floatval($data->width) : null;
+    $long = $data->long ? floatval($data->long) : null;
+    $maxHeight = $data->max_height ? floatval($data->max_height) : null;
+    $effectiveHeight = $data->effective_height ? floatval($data->effective_height) : null;
+    $diameter = $data->diameter ? floatval($data->diameter) : null;
+    $capacity = $data->capacity ? intval($data->capacity) : null;
+    $inUse = $data->in_use ? true : false;
+    $capacityByArea = null;
+    $capacityByVolume = null;
+    $costs = [];
+    $costsAmount = 0;
+
+    $area = null;
+    $effectiveVolume = null;
+    $maxVolume = null;
+
+    //Se calculan las variables auxiliares
+    if ($type === 'circular' && $diameter) {
+      $area = pi() * pow(($diameter / 2), 2);
+    } else if ($type === 'rectangular' && $width && $long) {
+      $area = $width * $long;
+    }
+
+    if ($area) {
+      //Se calculan los volumenes
+      $effectiveVolume = $effectiveHeight ? round($area * $effectiveHeight, 1) : null;
+      $maxVolume = $maxHeight ? round($area * $maxHeight, 1) : null;
+
+      //Se calculan los peces por area y por volumen
+      if ($capacity) {
+        $capacityByArea = round($capacity / $area, 0);
+        $capacityByVolume = $effectiveVolume ? round($capacity / $effectiveVolume, 0) : null;
+      }
+
+      //Se redondea el área
+      $area = round($area, 2);
+    }
+
+    foreach ($data->costs as $record) {
+      $cost = $this->buildFishpondCost($record);
+      $costs[] = $cost;
+      $costsAmount += $cost['amount'];
+    }
+
+    return [
+      'id' => intval($data->id),
+      'name' => $data->name,
+      'type' => $type,
+      'diameter' => $diameter,
+      'width' => $width,
+      'long' => $long,
+      'effectiveHeight' => $effectiveHeight,
+      'maxHeight' => $maxHeight,
+      'area' => $area,
+      'effectiveVolume' => $effectiveVolume,
+      'maxVolume' => $maxVolume,
+      'capacity' => $capacity,
+      'capacityByArea' => $capacityByArea,
+      'capacityByVolume' => $capacityByVolume,
+      'inUse' => $inUse,
+      'costs' => $costs,
+      'costsAmount' => $costsAmount
+    ];
+  }
+
+  /**
+   * Este metodo se encarga de crear las instancias de
+   * los costos que hacen parte de los estanques y 
+   * que son utilizdas por el compoenente.
+   */
+  protected function buildFishpondCost($cost)
+  {
+    $date = Carbon::createFromFormat('Y-m-d H:i:s', $cost->cost_date);
+    $amount = floatval($cost->amount);
+    return [
+      'id' => intval($cost->id),
+      'date' => $date->format('Y-m-d'),
+      'time' => $date->format('H:i'),
+      'type' => $cost->type,
+      'description' => $cost->description,
+      'amount' => $amount,
+      'createdAt' => $cost->created_at,
+      'updatedAt' => $cost->updated_at
+    ];
+  }
+
   // *================================================================*
   // *===================== REGLAS DE VALIDACION =====================*
   // *================================================================*
@@ -64,19 +173,46 @@ class FishpondComponent extends Component
     'capacity' => 'Capacidad'
   ];
 
-  public function getFishponds()
-  {
-    $result = [];
-    $userId = session()->get('userId');
 
-    //Se recuperan los datos
-    $data = Fishpond::orderBy('created_at')->where('user_id', $userId)->get();
-    foreach ($data as $record) {
-      $result[] = $this->buildFishpond($record);
+  /**
+   * Se encarga de crear las reglas de validación que
+   * se van a utilizar para los datos provenietes del formulario
+   * @param bool $inThisMoment Sirve para definir si construye la fecha o esta es suministrada
+   * @param bool $setTime Si la hora de la fecha fue establecida
+   */
+  protected function costRules(bool $inThisMoment = true, bool $setTime = false)
+  {
+    $rules = [
+      'fishpondId' => 'required|numeric|exists:fishpond,id',
+      'type' => 'required|string|in:materials,workforce,maintenance',
+      'description' => 'required|string|min:3|max:255',
+      'amount' => 'required|numeric|between:0.01,99999999.99',
+      'inThisMoment' => 'required|boolean',
+      'setTime' => 'required|boolean',
+    ];
+
+    if (!$inThisMoment) {
+      $rules['date'] = 'required|string|date|before_or_equal:' . Carbon::now()->format('Y-m-d');
+      if ($setTime) {
+        $rules['time'] = 'required|string|date_format:H:i';
+      }
     }
 
-    return $result;
+    return $rules;
   }
+
+  protected function costAttributes()
+  {
+    return [
+      'type' => 'Tipo de costo',
+      'description' => 'descripción',
+      'amount' => 'importe',
+      'date' => 'fecha',
+      'time' => 'hora'
+    ];
+  }
+
+
 
   // *================================================================*
   // *============================= CRUD =============================*
@@ -165,64 +301,190 @@ class FishpondComponent extends Component
     ];
   }
 
-  protected function buildFishpond($data)
+  public function destroyFishpond(int $id)
   {
-    $type = $data->type;
-    $width = $data->width ? floatval($data->width) : null;
-    $long = $data->long ? floatval($data->long) : null;
-    $maxHeight = $data->max_height ? floatval($data->max_height) : null;
-    $effectiveHeight = $data->effective_height ? floatval($data->effective_height) : null;
-    $diameter = $data->diameter ? floatval($data->diameter) : null;
-    $capacity = $data->capacity ? intval($data->capacity) : null;
-    $inUse = $data->in_use ? true : false;
-    $capacityByArea = null;
-    $capacityByVolume = null;
-
-    $area = null;
-    $effectiveVolume = null;
-    $maxVolume = null;
-
-    //Se calculan las variables auxiliares
-    if ($type === 'circular' && $diameter) {
-      $area = pi() * pow(($diameter / 2), 2);
-    } else if ($type === 'rectangular' && $width && $long) {
-      $area = $width * $long;
-    }
-
-    if ($area) {
-      //Se calculan los volumenes
-      $effectiveVolume = $effectiveHeight ? round($area * $effectiveHeight, 2) : null;
-      $maxVolume = $maxHeight ? round($area * $maxHeight, 2) : null;
-
-      //Se calculan los peces por area y por volumen
-      if ($capacity) {
-        $capacityByArea = round($capacity / $area, 2);
-        $capacityByVolume = $effectiveVolume ? round($capacity / $effectiveVolume, 2) : null;
+    $isOk = false;
+    $errors = [];
+    //Se busca el estanque
+    if (userHasPermission('delete_fishpond')) {
+      $fispond = Fishpond::find($id, ['id', 'name']);
+      if ($fispond) {
+        $message = "El estanque \"$fispond->name\" fue eliminado correctamente";
+        $fispond->delete();
+        $this->alert('¡Estanque Eliminado!', 'success', $message);
+        $isOk = true;
+      } else {
+        $this->alert('Estanque no encontrado', 'error');
+        $errors['notFound'] = "El estanque no fue encontrado";
       }
-
-      //Se redondea el área
-      $area = round($area, 2);
+    } else {
+      $this->doesNotPermission('eliminar estanques');
     }
-
 
     return [
-      'id' => intval($data->id),
-      'name' => $data->name,
-      'type' => $type,
-      'diameter' => $diameter,
-      'width' => $width,
-      'long' => $long,
-      'effectiveHeight' => $effectiveHeight,
-      'maxHeight' => $maxHeight,
-      'area' => $area,
-      'effectiveVolume' => $effectiveVolume,
-      'maxVolume' => $maxVolume,
-      'capacity' => $capacity,
-      'capacityByArea' => $capacityByArea,
-      'capacityByVolume' => $capacityByVolume,
-      'inUse' => $inUse,
+      'isOk' => $isOk,
+      'errors' => $errors
     ];
   }
+
+  public function storeFishpondCost($data)
+  {
+    $isOk = false;
+    $errors = [];
+    $cost = null;
+    $fishpond = null;
+
+    if (userHasPermission('create_fishpond_cost')) {
+      $inThisMoment = $data['inThisMoment'];
+      $setTime = $data['setTime'];
+      $rules = $this->costRules($inThisMoment, $setTime);
+      $attributes = $this->costAttributes();
+
+      try {
+        $validation = Validator::make($data, $rules, [], $attributes)->validate();
+        $inputs = $this->buildCostData($validation);
+
+        //Recupero el estanque 
+        /** @var Fishpond */
+        $fishpond = Fishpond::find($inputs['fishpond_id'], ['id']);
+        //Se guarda el costo del estanque
+        $cost = $fishpond?->costs()->create($inputs);
+        //Se emite el evento y se guarda que todo ha sidocorrecto
+        $this->alert('¡Costo creado con exito!', 'success');
+        $isOk = true;
+      } catch (ValidationException $valExc) {
+        $errors = $valExc->errors();
+      } catch (\Throwable $th) {
+        $this->emitError($th);
+      }
+    } else {
+      $this->doesNotPermission('registar costos el estanque');
+    }
+
+    if (!empty($cost)) {
+      $cost = $this->buildFishpondCost($cost);
+      $cost['fishpondId'] = intval($fishpond->id);
+    }
+
+    return [
+      'isOk' => $isOk,
+      'errors' => $errors,
+      'cost' => $cost,
+    ];
+  }
+
+  public function updateFishpondCost($data)
+  {
+    $isOk = false;
+    $errors = null;
+    $cost = null;
+    $fishpondId = $data['fishpondId'];
+    $costId = $data['costId'];
+
+    if (userHasPermission('update_fishpond_cost')) {
+      //Recupero las variables temporales
+      $inThisMoment = $data['inThisMoment'];
+      $setTime = $data['setTime'];
+      //Recupero las reglas y los atributos
+      $rules = $this->costRules($inThisMoment, $setTime);
+      $attributes = $this->costAttributes();
+
+      try {
+        //Se realiza la validación
+        $validation = Validator::make($data, $rules, [], $attributes)->validate();
+        $inputs = $this->buildCostData($validation);
+
+        //Se recupera el costo
+        /** @var FishpondCost */
+        $cost = FishpondCost::find($costId);
+
+        //Se actualizan los campos del costo
+        $cost->cost_date = $inputs['cost_date'];
+        $cost->type = $inputs['type'];
+        $cost->description = $inputs['description'];
+        $cost->amount = $inputs['amount'];
+        $cost->save();
+
+        $this->alert('¡Costo Actualizado!', 'info');
+        $isOk = true;
+      } catch (ValidationException $valExc) {
+        $errors = $valExc->errors();
+      } catch (\Throwable $th) {
+        $this->emitError($th);
+      }
+    } else {
+      $this->doesNotPermission('actualizar el costo de este estanque');
+    }
+
+    if (!empty($cost)) {
+      $cost = $this->buildFishpondCost($cost);
+      $cost['fishpondId'] = $fishpondId;
+    }
+
+    return [
+      'isOk' => $isOk,
+      'errors' => $errors,
+      'cost' => $cost,
+    ];
+  }
+
+  public function destroyFishpondCost($fishpondId, $costId)
+  {
+    $isOk = false;
+    $errors = [];
+
+    if (userHasPermission('delete_fishpond')) {
+      //Se busca el costo
+      $cost = FishpondCost::where('fishpond_id', $fishpondId)->find($costId, ['id']);
+      if ($cost) {
+        
+        $cost->delete();
+        $this->alert('¡Costo Eliminado!', 'success');
+        $isOk = true;
+      } else {
+        $this->alert('Costo no encontrado', 'error');
+        $errors['notFound'] = "El estanque no fue encontrado";
+      }
+    } else {
+      $this->doesNotPermission('eliminar costo de estanques');
+    }
+
+    return [
+      'isOk' => $isOk,
+      'errors' => $errors
+    ];
+  }
+
+  /**
+   * Este metodo se encarga de crear la información 
+   * que puede ser alamcenada en la base de datos
+   * con los nombre de las columnas que este utiliza
+   */
+  protected function buildCostData($data)
+  {
+    $result = [
+      'fishpond_id' => $data['fishpondId'],
+      'type' => $data['type'],
+      'description' => $data['description'],
+      'amount' => $data['amount']
+    ];
+
+    if (!$data['inThisMoment']) {
+      $date = $data['date'];
+      if ($data['setTime']) {
+        $time = $data['time'];
+        $result['cost_date'] = Carbon::createFromFormat('Y-m-d H:i', "$date $time")->format('Y-m-d H:i:s');
+      } else {
+        $result['cost_date'] = Carbon::createFromFormat('Y-m-d', $date)->startOfDay()->format('Y-m-d H:i:s');
+      }
+    } else {
+      $result['cost_date'] = Carbon::now()->format('Y-m-d H:i:s');
+    }
+
+    return $result;
+  }
+
+
 
   // *================================================================*
   // *========================== UTILIDADES ==========================*

@@ -12,14 +12,14 @@
         <h5 class="text-left p-0 m-0" x-text="fishpond.name"></h5>
         <div class="">
           <a href="javascript:;" class="btn btn-info btn-sm mr-1" x-on:click.stop="editFishpond(fishpond)"><i class="fas fa-edit"></i></a>
-          <a href="javascript:;" class="btn btn-danger btn-sm disabled" ><i class="fas fa-trash"></i></a>
+          <a href="javascript:;" class="btn btn-danger btn-sm" x-on:click="destroyFishpond(fishpond.id)"><i class="fas fa-trash"></i></a>
         </div>
       </div>
     </header>
     {{-- Cuerpo del estanque --}}
     <div class="card-body">
       {{-- Caracteristicas del estanque --}}
-      <div class="border-bottom">
+      <div class="border-bottom mb-2">
         <div class="row">
           {{-- AREA SUPERFICIAL --}}
           <div class="col-6">
@@ -148,6 +148,15 @@
         <template x-if="!fishpond.volume && !fishpond.area && !fishpond.capacity">
           <p class="m-0">El estanque no presenta variables de diseño</p>
         </template>
+      </div>
+
+      <div class="row aling-items-center">
+        <div class="col-9 text-center align-self-center" title="Sumatoria de costos">
+          <span class="h4" x-text="formatCurrency(fishpond.costsAmount)"></span>
+        </div>
+        <div class="col-3 text-center">
+          <button class="btn btn-primary" x-on:click="showCosts(fishpond)"><i class="fas fa-book"></i></button>
+        </div>
       </div>
     </div>
   </div>

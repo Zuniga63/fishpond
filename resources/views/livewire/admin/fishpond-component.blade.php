@@ -1,9 +1,11 @@
 <div 
   x-data="app()" 
   x-init="init($wire, $dispatch)"
-  x-on:cancel-register="showingModal = false"
+  x-on:hidden-modal="hiddenModal"
   x-on:new-fishpond-registered="addNewFishpond($event.detail)"
+  x-on:new-fishpond-cost-registered="addNewFishpondCost($event.detail)"
   x-on:fishpond-updated="updateFishpond($event.detail)";
+  x-on:fishpond-cost-updated="updateFishpondCost($event.detail)"
   wire:ignore
 >
   {{-- Version Mobil --}}
@@ -19,8 +21,12 @@
       </div>
     </div>
 
-    <div x-show="!updatingModel" class="pb-5">
+    <div x-show.transition.in.duration.300ms="!updatingModel && !showingCosts" class="pb-5">
       <x-admin.fishpond.fishpond-card/>
+    </div>
+
+    <div x-show.transition.in.duration.300ms="showingCosts">
+      <x-admin.fishpond.cost/>
     </div>
 
     <template x-if="fishponds.length <= 0 && !updatingModel">
@@ -32,16 +38,25 @@
     <button 
       class="btn btn-primary rounded-circle new-fishpond-buttom z-fixed shadow"
       x-show.transition.duration.500ms="!showingModal"
-      x-on:click="showingModal = true"
+      x-on:click="showRegisterForm"
     >
       <i class="fas fa-plus"></i>
+    </button>
+
+    {{-- Boton para HABILITAR FORMULARIO DE COSTOS --}}
+    <button 
+      class="btn btn-primary rounded-circle new-fishpond-buttom z-fixed shadow"
+      x-show.transition.duration.500ms="!showingModal && showingCosts"
+      x-on:click="showCostForm"
+    >
+      <i class="fas fa-book"></i>
     </button>
 
     {{-- Modal para registrar nuevo estanque --}}
     <div 
       class="new-fishpond-modal z-modal" 
       style="display: none"
-      x-show.transition.duration.500ms="showingModal"
+      x-show.transition.duration.500ms="showingRegisterModal"
     >
       <div 
         class="d-flex flex-column justify-content-center h-screen"
@@ -50,6 +65,23 @@
         <x-admin.fishpond.register-form/>
       </div>
     </div>
+    {{-- /.end modal --}}
+    
+    {{-- Modal para registrar nuevo costo --}}
+    <div 
+      class="new-fishpond-modal z-modal" 
+      style="display: none"
+      x-show.transition.duration.500ms="showingCostForm"
+    >
+      <div 
+        class="d-flex flex-column justify-content-center h-screen"
+        x-on:click.self="$dispatch('hidden-cost-form')"
+      >
+        <x-admin.fishpond.cost-form/>
+      </div>
+    </div>
+    {{-- /.end modal --}}
+
   </div>
 
   {{-- Version de escritorio --}}

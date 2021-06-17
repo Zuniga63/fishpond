@@ -17,6 +17,7 @@ const input = (config) => {
     step: config.step,
     required: config.required,
     value: config.value ? config.value : null,
+    default: config.value ? config.value : null,
     hasError: false,
     errorMessage: null,
     disabled: false,
@@ -25,7 +26,7 @@ const input = (config) => {
      * estado inicial
      */
     reset() {
-      this.value = null;
+      this.value = this.default;
       this.hasError = false;
       this.errorMessage = null;
     },
