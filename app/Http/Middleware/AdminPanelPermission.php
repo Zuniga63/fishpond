@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 
 class AdminPanelPermission
 {
-  private $enabledRoles = [1,2];
+  private $enabledRoles = [1,2,3];
   /**
    * Handle an incoming request.
      *
