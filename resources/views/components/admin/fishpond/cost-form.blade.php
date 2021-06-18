@@ -18,7 +18,7 @@
   <!--/.end header -->
 
   <!-- body -->
-  <div class="card-body" style="max-height: 75vh; overflow-y: scroll">
+  <div class="card-body" style="max-height: 60vh; overflow-y: scroll">
     <!-- Tipo de costo -->
     <div class="form-group mb-1">
       <label x-bind:for="costType.id" class="mb-1 required" x-html="costType.label"></label>

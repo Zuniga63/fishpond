@@ -17,7 +17,7 @@
   <!--/.end header -->
 
   <!-- body -->
-  <div class="card-body" style="max-height: 75vh; overflow-y: scroll">
+  <div class="card-body" style="max-height: 70vh; overflow-y: scroll">
     <!-- Nombre del estanque -->
     <div class="form-group mb-1">
       <label x-bind:for="name.id" class="mb-1 required" x-html="name.label"></label>

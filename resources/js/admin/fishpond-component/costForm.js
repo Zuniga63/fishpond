@@ -197,6 +197,7 @@ const costForm = () => {
       }
 
       this.title = "Registrar Costo";
+      this.mode = "register"
     },
     /**
      * Se encarga de resetear el formulario 
