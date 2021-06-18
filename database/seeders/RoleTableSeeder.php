@@ -15,7 +15,7 @@ class RoleTableSeeder extends Seeder
    */
   public function run()
   {
-    $roles = ['SuperAdmin', 'Administrador'];
+    $roles = ['SuperAdmin', 'Administrador', 'usuario'];
     $now = Carbon::now();
 
     foreach ($roles as $role) {

@@ -58,6 +58,10 @@ class PermissionTableSeeder extends Seeder
        */
       ["name" => "Crear Nuevo Estanque", "action" => "create_fishpond", "order" => 23],
       ["name" => "Actualizar Estanque", "action" => "update_fishpond", "order" => 24],
+      ["name" => "Crear Costos a estanques", "action" => "create_fishpond_cost", "order" => 25],
+      ["name" => "Actualiza Cotos del Estanque", "action" => "update_fishpond_cost", "order" => 26],
+      ["name" => "Eliminar Estanque", "action" => "delete_fishpond", "order" => 27],
+      ["name" => "Eliminar Costo de Estanque", "action" => "delete_fishpond_cost", "order" => 28],
     ];
 
     foreach ($permissions as $data) {

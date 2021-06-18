@@ -17,6 +17,7 @@ class MenuTableSeeder extends Seeder
   {
     $menus = [
       ["id" => 1, "fatherId" => null, "name" => "Panel", "url" => "admin", "icon" => "fas fa-tachometer-alt", "order" => 1, ],
+      ["id" => 8, "fatherId" => null, "name" => "Estanques", "url" => "admin/estanques", "icon" => "fas fa-water", "order" => 1, ],
       ["id" => 2, "fatherId" => null, "name" => "Administracion", "url" => "#", "icon" => "fas fa-cogs", "order" => 2, ],
         ["id" => 3, "fatherId" => 2, "name" => "Usuarios", "url" => "admin/usuarios", "icon" => "fas fa-users", "order" => 1, ],
         ["id" => 4, "fatherId" => 2, "name" => "Permisos", "url" => "admin/permisos", "icon" => "fas fa-hand-paper", "order" => 2, ],
