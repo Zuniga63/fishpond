@@ -1,0 +1,1 @@
+{"version":3,"sources":["webpack:///./resources/js/admin/fish-batch-component/app.js"],"names":["console","log"],"mappings":"AAAAA,QAAQC,IAAI","file":"/js/admin/fish-batch-component/app.js","sourcesContent":["console.log('Start Work');"],"sourceRoot":""}
