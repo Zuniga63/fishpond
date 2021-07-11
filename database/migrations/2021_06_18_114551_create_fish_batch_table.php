@@ -17,8 +17,6 @@ class CreateFishBatchTable extends Migration
       $table->id();
       $table->foreignId('user_id')->nullable()->constrained('user')->onDelete('SET NULL');
       $table->foreignId('fishpond_id')->nullable()->constrained('fishpond')->onDelete('SET NULL');
-      $table->string('provider', 20)->nullable();
-      $table->string('observation')->nullable();
       $table->timestamp('seedtime');
       $table->timestamp('harvest')->nullable();
       $table->unsignedSmallInteger('initial_polulation');
