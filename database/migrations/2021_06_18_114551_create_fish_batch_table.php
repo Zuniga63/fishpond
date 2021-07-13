@@ -19,7 +19,7 @@ class CreateFishBatchTable extends Migration
       $table->foreignId('fishpond_id')->nullable()->constrained('fishpond')->onDelete('SET NULL');
       $table->timestamp('seedtime');
       $table->timestamp('harvest')->nullable();
-      $table->unsignedSmallInteger('initial_polulation');
+      $table->unsignedSmallInteger('initial_population');
       $table->float('initial_weight', 5, 2);
       $table->unsignedSmallInteger('population');
       $table->decimal('amount', 10, 2);
