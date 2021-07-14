@@ -164,6 +164,8 @@ window.fishBatchForm = () => {
       this.averageWeight.reset();
       this.biomass = null;
       this.amount.reset();
+      this.refs.fishBatchAmount.value = '';
+      this.unitCost = null;
     },
     enableForm(mode = 'register', fishBatch = null) {
       this.visible = true;
