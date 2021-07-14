@@ -157,6 +157,7 @@ window.fishBatchForm = () => {
       this.visible = false;
       this.mode = "register";
       this.fishBatch = null;
+      this.fishponds = this.allFishponds.filter(x => !x.inUse);
       //Se resetean los campos
       this.fishpondId.reset();
       this.inThisMoment = true;
@@ -171,7 +172,32 @@ window.fishBatchForm = () => {
       this.visible = true;
       this.mode = mode;
       if (mode === 'updating') {
-        //Se cargan los datos del lote
+        //Se busca el estanque 
+        let fishpond = this.allFishponds.find(x => x.id === fishBatch.fishpond.id);
+        //Se agrega el estanque al listado
+        this.fishponds.push(fishpond);
+        //Se selecciona
+        setTimeout(() => {
+          this.fishpondId.value = fishpond.id;
+        }, 100);
+
+        //Se carga la fecha de la siembra
+        this.inThisMoment = false;
+        this.date.value = fishBatch.seedtime.format('YYYY-MM-DD');
+        this.setTime = true;
+        this.time.value = fishBatch.seedtime.format('HH:mm');
+
+        //Se actualiza la población incial, peso y biomasa
+        this.population.value = fishBatch.initialPopulation;
+        this.averageWeight.value = fishBatch.initialWeight;
+        this.updateBiomass();
+
+        //Se actualiza el importa
+        this.amount.value = fishBatch.amount;
+        this.refs.fishBatchAmount.value = window.formatCurrency(fishBatch.amount, 0);
+        this.updateUnitCost();
+
+        this.fishBatch = fishBatch;
       }
     },
     /**
@@ -201,16 +227,16 @@ window.fishBatchForm = () => {
         .then(res => {
           if (res.ok) {
             //Se emite el evento con los datos del nuevo lote de peces
-            this.dispatch('fish-batch-created', {fishBatch: res.fishBatch});
+            this.dispatch('fish-batch-created', { fishBatch: res.fishBatch });
             //Se resetea el formulario
             this.reset();
             //Se actualiza el arreglo con los estanques
             this.__buildFishponds(res.fishponds);
           } else {
-            if(res.errors?.fishpondInUse){
+            if (res.errors?.fishpondInUse) {
               this.fishpondId.reset();
               this.__buildFishponds(res.fishponds);
-            }else{
+            } else {
               this.notifyErrors(res.errors);
             }
           }
@@ -221,7 +247,30 @@ window.fishBatchForm = () => {
         })
     },
     __update() {
-      //TODO
+      this.waiting = true;
+      let data = this.getSubmitData();
+      this.wire.updateFishBatch(data)
+        .then(res => {
+          if (res.ok) {
+            //Se emite el evento con los datos del nuevo lote de peces
+            this.dispatch('fish-batch-updated', { fishBatch: res.fishBatch });
+            //Se resetea el formulario
+            this.reset();
+            //Se actualiza el arreglo con los estanques
+            this.__buildFishponds(res.fishponds);
+          } else {
+            if (res.errors?.fishpondInUse) {
+              this.fishpondId.reset();
+              this.__buildFishponds(res.fishponds);
+            } else {
+              this.notifyErrors(res.errors);
+            }
+          }
+        }).catch(error => {
+          console.log(error);
+        }).finally(() => {
+          this.waiting = false;
+        })
     },
     /**
      * Crea un objeto con los datos requeridos por el servidor
