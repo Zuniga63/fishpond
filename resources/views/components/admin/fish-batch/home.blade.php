@@ -37,7 +37,7 @@
         {{-- INFORMACIÓN RELACIONADA A LA SIEMBRA Y COSESCHA --}}
         <div class="border-bottom">
           <p class="m-0">Siembra: <span class="text-bold" x-text="batch.seedtime.format('dddd DD-MM-YYYY hh:mm a')"></span></p>
-          <p class="m-0 text-sm text-muted">Edad: <span x-text="batch.age"></span></p>
+          <p class="m-0 text-sm text-muted">Siembra realizada <span x-text="batch.seedtime.fromNow()"></span></p>
           <p class="m-0" x-show="batch.harvest">Cosecha: <span class="text-bold" x-text="batch.harvest?.format('dddd, DD/MM/YY')"></span></p>
         </div>
 
