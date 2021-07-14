@@ -75,7 +75,7 @@
 
 
         <footer class="card-footer">
-          <button class="btn btn-primary" style="width: 100%">Ver más información</button>
+          <button class="btn btn-primary" style="width: 100%" x-on:click="selectFishBatch(batch)">Ver más información</button>
         </footer>
       </div>
       <!--/.end body -->

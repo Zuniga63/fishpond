@@ -17,6 +17,8 @@ dayjs.locale('es-do');
 window.app = () => {
   return {
     tab: 'sown-lot',    //[sown-lot, harvested-batch]
+    /** Define si la vista es del home o de algun lote */
+    home: true,
     /** Arreglo con todos los lotes de peces */
     allFishBatchs: [],
     /** Arreglo con los estanques que están almacenados */
@@ -225,7 +227,6 @@ window.app = () => {
       this.updateFishBatchList();
       this.formActive = false;
     },
-
     __printSubmitData(data) {
       let bodyLength = 60;
       let separator = '-';
@@ -259,6 +260,10 @@ window.app = () => {
       text += header;
       console.log(text, data);
     },
+    selectFishBatch(fishBatch){
+      this.home = false;
+      this.dispatch('fish-batch-selected', fishBatch);
+    }
   }
 }
 
