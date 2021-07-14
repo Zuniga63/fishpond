@@ -317,10 +317,9 @@ class FishBatchComponent extends Component
           //Se actualiza el lote
           $fishBatch->fishpond_id = $inputs['fishpondId'];
           $fishBatch->seedtime = $fullDate->format('Y-m-d H:i');
-          $fishBatch->initial_population = $inputs['population'];
           $fishBatch->initial_weight = $inputs['averageWeight'];
-
-          //Se actualiza el lote teniendo encuenta las muertes hasta la fecha
+          
+          //Se actualiza la población teniendo encuenta las muertes hasta la fecha
           if ($fishBatch->population == $fishBatch->initial_population) {
             $fishBatch->population = $inputs['population'];
           } else {
@@ -328,7 +327,8 @@ class FishBatchComponent extends Component
             $diff = intval($fishBatch->population) - intval($fishBatch->initial_population);
             $fishBatch->population = $inputs['population'] + $diff;
           }
-
+          //Se actualiza la población inicial
+          $fishBatch->initial_population = $inputs['population'];
           //Se actualiza el coste
           $fishBatch->amount = $inputs['amount'];
           //Se guardan los cambios
