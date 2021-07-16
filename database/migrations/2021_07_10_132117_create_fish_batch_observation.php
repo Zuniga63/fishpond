@@ -16,6 +16,7 @@ class CreateFishBatchObservation extends Migration
     Schema::create('fish_batch_observation', function (Blueprint $table) {
       $table->id();
       $table->foreignId('fish_batch_id')->constrained('fish_batch')->cascadeOnDelete();
+      $table->string('title', 45);
       $table->string('message');
       $table->timestamps();
       $table->charset = 'utf8mb4';
