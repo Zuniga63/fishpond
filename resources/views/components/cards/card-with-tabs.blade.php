@@ -4,7 +4,7 @@
       {{ $tabs }}
     </ul>
   </div>
-  <div class="card-body">
+  <div class="card-body" style="min-height: 300px; max-height: 70vh; overflow: auto">
     {{ $slot }}
   </div>
 </div>
