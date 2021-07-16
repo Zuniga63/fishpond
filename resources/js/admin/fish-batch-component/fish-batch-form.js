@@ -8,7 +8,7 @@ dayjs.extend(isSameOrBefore);
 window.fishBatchForm = () => {
   return {
     /** Esta variable determina si se muestra o no el formulario en pantalla */
-    visible: true,
+    visible: false,
     /**
      * Determina el tipo de formulario
      * register: Para nuevo lote de peces
