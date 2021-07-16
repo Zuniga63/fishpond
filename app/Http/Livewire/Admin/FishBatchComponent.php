@@ -3,6 +3,7 @@
 namespace App\Http\Livewire\Admin;
 
 use App\Models\FishBatch;
+use App\Models\FishBatchObservation;
 use App\Models\Fishpond;
 use App\Models\User;
 use Carbon\Carbon;
@@ -87,6 +88,12 @@ class FishBatchComponent extends Component
 
   protected function createFishBatch(FishBatch $data)
   {
+    //Recupero las observaciones
+    $observations = $data->observations()
+      ->orderBy('created_at')
+      ->get(['id', 'title', 'message', 'created_at as createdAt', 'updated_at as updatedAt'])
+      ->toArray();
+
     return [
       'id' => intval($data->id),
       'fishpondId' => intval($data->fishpond_id),
@@ -96,6 +103,7 @@ class FishBatchComponent extends Component
       'initialWeight' => floatval($data->initial_weight),
       'population' => intval($data->population),
       'amount' => intval($data->amount),
+      'observations' => $observations,
       'createdAt' => $data->created_at,
       'updatedAt' => $data->updated_at,
     ];
@@ -145,6 +153,29 @@ class FishBatchComponent extends Component
     'date' => 'Fecha',
     'time' => 'Hora',
   ];
+
+  protected function observationRules($update = false)
+  {
+    $rules = [
+      'fishBatchId' => 'required|integer|min:1|exists:fish_batch,id',
+      'title' => 'required|string|min:3|max:45',
+      'message' => 'required|string|min:3|max:255'
+    ];
+
+    if ($update) {
+      $rules['observationId'] = 'required|integer|min:1|exists:fish_batch_observation,id';
+    }
+
+    return $rules;
+  }
+
+  protected $observationAttributes = [
+    'fishBatchId' => 'id del estanque',
+    'observationId' => 'id de la observación',
+    'title' => 'título',
+    'message' => 'mensaje',
+  ];
+
   // *===============================================*
   // *==================== CRUD =====================*
   // *===============================================*
@@ -257,7 +288,7 @@ class FishBatchComponent extends Component
     $ok = false;
     $errors = null;
     $fishBatch = null;
-    $fishPonds = null;
+    $fishponds = null;
 
     //variables temporales
     $inThisMoment = true;
@@ -318,7 +349,7 @@ class FishBatchComponent extends Component
           $fishBatch->fishpond_id = $inputs['fishpondId'];
           $fishBatch->seedtime = $fullDate->format('Y-m-d H:i');
           $fishBatch->initial_weight = $inputs['averageWeight'];
-          
+
           //Se actualiza la población teniendo encuenta las muertes hasta la fecha
           if ($fishBatch->population == $fishBatch->initial_population) {
             $fishBatch->population = $inputs['population'];
@@ -375,6 +406,135 @@ class FishBatchComponent extends Component
     ];
   } //.end method
 
+  public function storeObservation(array $data)
+  {
+    $ok = false;
+    $errors = null;
+    $observation = null;
+    $rules = $this->observationRules();
+    $attributes = $this->observationAttributes;
+
+    if (userHasPermission('update_fish_batch')) {
+      try {
+        $inputs = Validator::make($data, $rules, [], $attributes)->validate();
+
+        //Recupero el lote de peces
+        /** @var FishBatch */
+        $fishBatch = FishBatch::find($inputs['fishBatchId'], ['id']);
+        //Creo la observación
+        $observation = $fishBatch->observations()->create([
+          'title' => $inputs['title'],
+          'message' => $inputs['message']
+        ]);
+
+        $observation = [
+          'id' => $observation->id,
+          'fishBatchId' => $observation->fish_batch_id,
+          'title' => $observation->title,
+          'message' => $observation->message,
+          'createdAt' => Carbon::createFromFormat('Y-m-d H:i:s', $observation->created_at)->format('Y-m-d H:i:s'),
+          'updatedAt' => Carbon::createFromFormat('Y-m-d H:i:s', $observation->updated_at)->format('Y-m-d H:i:s'),
+        ];
+
+        $ok = true;
+        $this->alert('Observación Creada', 'success');
+      } catch (ValidationException $valExc) {
+        $errors = $valExc->errors();
+      } catch (\Throwable $th) {
+        $this->emitError($th);
+      }
+    } else {
+      $this->doesNotPermission('crear observaciones');
+    }
+
+    return [
+      'ok' => $ok,
+      'errors' => $errors,
+      'observation' => $observation
+    ];
+  }
+
+  public function updateObservation(array $data)
+  {
+    $ok = false;
+    $errors = null;
+    $observation = null;
+    $rules = $this->observationRules(true);
+    $attributes = $this->observationAttributes;
+
+    if (userHasPermission('update_fish_batch')) {
+      try {
+        $inputs = Validator::make($data, $rules, [], $attributes)->validate();
+
+        //Recupero la observación
+        $observation = FishBatchObservation::find($inputs['observationId']);
+        //Se actualiza la observación
+        $observation->title = $inputs['title'];
+        $observation->message = $inputs['message'];
+        $observation->save();
+
+        //Se crea el objeto
+        $observation = [
+          'id' => $observation->id,
+          'fishBatchId' => $observation->fish_batch_id,
+          'title' => $observation->title,
+          'message' => $observation->message,
+          'createdAt' => Carbon::createFromFormat('Y-m-d H:i:s', $observation->created_at)->format('Y-m-d H:i:s'),
+          'updatedAt' => Carbon::createFromFormat('Y-m-d H:i:s', $observation->updated_at)->format('Y-m-d H:i:s'),
+        ];
+
+        $ok = true;
+        $this->alert('Observación Creada', 'success');
+      } catch (ValidationException $valExc) {
+        $errors = $valExc->errors();
+      } catch (\Throwable $th) {
+        $this->emitError($th);
+      }
+    } else {
+      $this->doesNotPermission('crear observaciones');
+    }
+
+    return [
+      'ok' => $ok,
+      'errors' => $errors,
+      'observation' => $observation
+    ];
+  }
+
+  public function destroyObservation($observationId)
+  {
+    $ok = false;
+    $errors = null;
+    $userId = session()->get('userId');
+    if (userHasPermission('update_fish_batch')) {
+      //Recupero la observación
+      $observation = FishBatchObservation::find($observationId);
+      if ($observation) {
+        $userSafe = intval($observation->fishBatch->user_id) === $userId;
+        if ($userSafe) {
+          $observation->delete();
+          $ok = true;
+          $this->alert('Observación eliminada');
+        } else {
+          $errors = [
+            'unknow' => 'Usuario desconocido',
+          ];
+        }
+      } else {
+        $this->alert('Observación no encontrada', 'error');
+        $errors = [
+          'notFound' => true
+        ];
+      }
+    } else {
+      $this->doesNotPermission('eliminar observaciones');
+    }
+
+    return [
+      'ok' => $ok,
+      'errors' => $errors
+    ];
+  }
   // *================================================================*
   // *========================== UTILIDADES ==========================*
   // *================================================================*
