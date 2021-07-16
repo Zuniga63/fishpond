@@ -55,6 +55,9 @@ window.app = () => {
 
       //Se seleccionan los lotes que están sembrados
       this.updateFishBatchList();
+      setTimeout(() => {
+        this.selectFishBatch(this.fishBatchs[0]);
+      }, 1000);
     },
     /**
      * Recibe los datos puros del servidor y los convierte en instancias de 
@@ -64,16 +67,23 @@ window.app = () => {
     createFishBatch(data) {
       //Se crea el objeto con los datos basicos
       let fishBatch = {
-        id : data.id,
-        seedtime : dayjs(data.seedtime),
-        harvest : data.harvest ? dayjs(data.harvest) : null,
-        initialPopulation : data.initialPopulation,
-        population : data.population,
-        initialWeight : data.initialWeight,
-        amount : data.amount,
+        id: data.id,
+        seedtime: dayjs(data.seedtime),
+        harvest: data.harvest ? dayjs(data.harvest) : null,
+        initialPopulation: data.initialPopulation,
+        population: data.population,
+        initialWeight: data.initialWeight,
+        amount: data.amount,
+        observations: [],
         createdAt: dayjs(data.createdAt),
         updatedAt: dayjs(data.updatedAt),
       }
+
+      //Se crean las observaciones
+      data.observations.forEach(item => {
+        fishBatch.observations.push(this.createObservation(item));
+      });
+
 
       //Se recupea el estanque
       let fishpond = this.fishponds.find(item => item.id === data.fishpondId);
@@ -83,7 +93,7 @@ window.app = () => {
       fishBatch.fishpond = fishpond;
 
       //Se calcula la eda del lote
-      fishBatch.age = fishBatch.harvest 
+      fishBatch.age = fishBatch.harvest
         ? fishBatch.harvest.from(fishBatch.seedtime, true)
         : fishBatch.seedtime.fromNow(true);
 
@@ -91,7 +101,7 @@ window.app = () => {
       let biomass = data.population * data.initialWeight;
       let biomassUnit = 'g.';
 
-      if(biomass >= 1000){
+      if (biomass >= 1000) {
         biomass = biomass / 1000;
         biomassUnit = 'Kg.'
       }
@@ -102,6 +112,7 @@ window.app = () => {
       };
 
       //Se calculan las muer
+      console.log(fishBatch);
       return fishBatch;
 
     },
@@ -158,6 +169,16 @@ window.app = () => {
 
       return fishpond;
     },
+    createObservation(data) {
+      return {
+        id: data.id,
+        title: data.title,
+        message: data.message,
+        createdAt: dayjs(data.createdAt),
+        updatedAt: dayjs(data.updatedAt),
+        createIsSameUpdate: dayjs(data.createdAt).isSame(dayjs(data.updatedAt)),
+      };
+    },
     /**
      * Cambia el valor de la varible tab y actualiza el listado de
      * lotes que se muestran en el panel principal.
@@ -170,7 +191,7 @@ window.app = () => {
       }
       //Metodo para actualizar el listado de lotes
     },
-    updateFishBatchList(){
+    updateFishBatchList() {
       let tab = this.tab;
       //Se recuperan los lotes segun el tab
       if (tab === 'sown-lot') {
@@ -181,19 +202,27 @@ window.app = () => {
 
       //Algoritmo para ordenar por la fecha de siembra
     },
-    enableForm(name = null, fishBatch = null) {
+    enableForm(name = null, fishBatch = null, data = null) {
       if (name) {
         this.formActive = true;
         data = {
           mode: 'register',
-          fishBatch: fishBatch
+          fishBatch: fishBatch,
+          data: data,
         }
-        
+
         if (name === 'new-fish-batch') {
           this.dispatch('enable-fish-batch-form', data);
-        }else if(name === 'update-fish-batch'){
-          data.mode ="updating";
+        } else if (name === 'update-fish-batch') {
+          data.mode = "updating";
           this.dispatch('enable-fish-batch-form', data);
+        } else if (name === 'new-fish-batch-observation') {
+          this.dispatch('enable-fish-batch-observation-form', data);
+        } else if (name === 'update-fish-batch-observation') {
+          data.mode = 'updating';
+          this.dispatch('enable-fish-batch-observation-form', data);
+        } else {
+          this.formActive = false;
         }
       }
     },
@@ -211,7 +240,7 @@ window.app = () => {
       this.updateFishBatchList();
       this.formActive = false;
     },
-    updateFishBatch(data){
+    updateFishBatch(data) {
       //Se crea una nueva instancia
       let fishBatchUpdated = this.createFishBatch(data);
       //Se recupera la antigua instnacia
@@ -219,12 +248,40 @@ window.app = () => {
       //Se actualizan todos los campos
       for (const key in fishBatchUpdated) {
         if (Object.hasOwnProperty.call(fishBatchUpdated, key)) {
-          lastFishBatch[key] = fishBatchUpdated[key];          
+          lastFishBatch[key] = fishBatchUpdated[key];
         }
       }
 
       //Se actualiza el listado
       this.updateFishBatchList();
+      this.formActive = false;
+    },
+    addObservation(detail) {
+      //Recupero el lote de peces
+      let fishBatch = this.allFishBatchs.find(batch => batch.id === detail.fishBatch.id);
+      //Se crea la observación
+      let observation = this.createObservation(detail.observation);
+      //Se agrega al listado
+      fishBatch.observations.push(observation);
+      this.dispatch('observation-was-added');
+      //Se deshabilita el formulario
+      this.formActive = false;
+    },
+    updateObservation(detail){
+      //Recupero el lote de peces
+      let fishBatch = this.allFishBatchs.find(batch => batch.id === detail.fishBatch.id);
+      //Se crea la observación
+      let observation = this.createObservation(detail.observation);
+      //Se busca la observación original
+      let original = fishBatch.observations.find(item => item.id === observation.id);
+      //Se actualizan los campos
+      for (const key in observation) {
+        if (Object.hasOwnProperty.call(original, key)) {
+          original[key] = observation[key];          
+        }
+      }
+
+      //Se deshabilita el formulario
       this.formActive = false;
     },
     __printSubmitData(data) {
@@ -260,7 +317,7 @@ window.app = () => {
       text += header;
       console.log(text, data);
     },
-    selectFishBatch(fishBatch){
+    selectFishBatch(fishBatch) {
       this.home = false;
       this.dispatch('fish-batch-selected', fishBatch);
     }
@@ -268,3 +325,5 @@ window.app = () => {
 }
 
 require('./fish-batch-form');
+require('./fish-batch-component');
+require('./fish-batch-observation-form');
