@@ -133,6 +133,11 @@
                     <span class="text-bold">Volumen</span>: 
                     <span x-text="fishpond?.volume"></span> m<sup>3</sup>
                   </p>        
+                  {{-- PROFUNDIDAD --}}
+                  <p class="m-0" x-show="fishpond?.depth">
+                    <span class="text-bold">Profundidad</span>: 
+                    <span x-text="fishpond?.depth"></span> m
+                  </p>        
                 </div>
                 <!--/.end col-->
                 {{-- POBLACIÓN DEL ESTANQUE --}}
@@ -147,10 +152,17 @@
                     </span>
                   </p>
 
-                  {{-- PRECIO UNITARIO --}}
+                  {{-- BIOMASA --}}
                   <p class="m-0">
-                    <span class="text-bold">Precio Unt</span>: 
-                    <span x-text="formatCurrency(fishBatch.unitPrice, 0)"></span>
+                    <span class="text-bold">Biomasa</span>: 
+                    <span x-text="fishBatch.biomass.value">
+                    </span> <i x-text="fishBatch.biomass.unit"></i>
+                  </p>
+
+                  {{-- PESO PROMEDIO --}}
+                  <p class="m-0">
+                    <span class="text-bold">Peso Prom.</span>: 
+                    <span x-text="fishBatch.averageWeight"></span> g.
                   </p>
 
                   {{-- DENSIDADES --}}
@@ -189,10 +201,22 @@
                   <p class="m-0 col-6">Alimentación:</p>
                   <p class="m-0 col-6 text-bold text-right" x-text="formatCurrency(0,0)"></p>
                 </div>
-                <div class="row border-top text-bold">
+                {{-- SUMATORIA --}}
+                <div class="row border-top text-bold border-bottom">
                   <p class="m-0 text-lg col-6">Total:</p>
                   <p class="m-0 text-lg col-6 text-right" x-text="formatCurrency(fishBatch.totalAmount)"></p>
                 </div>
+
+                {{-- PRECIO UNITARIO --}}
+                <p class="m-0">
+                  <span class="text-bold">Precio Unitario [$/pez]</span>: 
+                  <span x-text="formatCurrency(fishBatch.unitPrice, 0)"></span>
+                </p>
+                {{-- PRECIO UNITARIO --}}
+                <p class="m-0">
+                  <span class="text-bold">Precio [$/Kg]</span>: 
+                  <span x-text="formatCurrency(fishBatch.price, 0)"></span>
+                </p>
               </div>
 
               {{-- INFORMACIÓN DE CREACIÓN Y ACTUALIZACIÓN --}}

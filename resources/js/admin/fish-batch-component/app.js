@@ -144,6 +144,7 @@ window.app = () => {
         expenseAmount: 0,                     //Sumatoria de todos los gastos
         totalAmount: data.amount,             //Sumatoria de coste inicial, gastos y alimentación
         unitPrice: 0,                         //Valor unitario de cada pez
+        price: 0,                             //El precio de la biomasa en COP/Kg
         //Variables de la biomasa
         initialBiomass: null,                 //Biomasa teniendo encuenta los datos de siembre
         averageWeight: data.initialWeight,    //Peso promedio del la ultima biometría o por defecto peso inicial
@@ -211,6 +212,7 @@ window.app = () => {
       if (fishpond.area && data.effectiveHeight || data.maxHeight) {
         let height = data.effectiveHeight || data.maxHeight;
         fishpond.volume = _.round(fishpond.area * height, 1);
+        fishpond.depth = height;
       }
 
       //Se agregan las variable situacionales
@@ -373,11 +375,19 @@ window.app = () => {
       let expenses = fishBatch.expenses.reduce((amount, expense) => amount + expense.amount, 0);
       let totalAmount = initialCost + expenses;
       let unitPrice = _.round(totalAmount / fishBatch.population, 0);
+      let weight = fishBatch.biomass ? fishBatch.averageWeight * fishBatch.population : null;
+      let price = null;
+
+      if(weight){
+        weight = weight / 1000;
+        price = _.round(totalAmount/weight, 0);
+      }
 
       //Se actualiza el objeto
       fishBatch.expenseAmount = expenses;
       fishBatch.totalAmount = totalAmount;
       fishBatch.unitPrice = unitPrice;
+      fishBatch.price = price;
     },
     /**
      * Se encarga de actualizar los parametros referentes a la
