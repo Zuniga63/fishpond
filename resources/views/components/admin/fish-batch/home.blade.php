@@ -58,7 +58,7 @@
           {{-- BIOMASA --}}
           <div class="col-6">
             <p class="m-0">Biomasa: <span x-text="batch.biomass.value"></span> <span x-text="batch.biomass.unit"></span></p>
-            <p class="m-0 text-sm text-muted">Peso Promedio: <span x-text="batch.initialWeight"></span> g</p>
+            <p class="m-0 text-sm text-muted">Peso Promedio: <span x-text="batch.averageWeight"></span> g</p>
           </div>
           <!--/.end col-->
         </div>
