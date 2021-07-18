@@ -12,7 +12,7 @@ window.fishBatchComponent = () => {
      * Controla que listado es el que se muestra en pantalla y 
      * tambien controla que formulario se habilita. [observations, expenses, biometries, deaths]
      */
-    tab: 'observations',
+    tab: 'info',
     // *================================================*
     // *============ PROPIEDADES DE LA VISTA ===========*
     // *================================================*
@@ -41,9 +41,11 @@ window.fishBatchComponent = () => {
       this.refs = refs;
     },
     mountFishBatch(fishBatch) {
+      this.tab = 'info';
       this.fishBatch = fishBatch;
       this.fishpond = fishBatch.fishpond;
       this.observations = fishBatch.observations;
+      this.expenses = fishBatch.expenses;
 
       //Se establece la alerta de la población inicial
       this.initialPopulationWarning = fishBatch.fishpond.capacity
@@ -69,6 +71,8 @@ window.fishBatchComponent = () => {
 
       if (this.tab === 'observations') {
         info.formName = 'new-fish-batch-observation';
+      } if (this.tab === 'expenses') {
+        info.formName = 'new-fish-batch-expense';
       }
 
       this.dispatch('enable-form', info);
@@ -108,11 +112,47 @@ window.fishBatchComponent = () => {
         }
       });
     },
-    refresh(){
+    updateExpense(expense) {
+      let formName = 'update-fish-batch-expense';
+      let fishBatch = this.fishBatch;
+      let data = expense;
+
+      this.dispatch('enable-form', { formName, fishBatch, data });
+    },
+    destroyExpense(expense) {
+      window.Swal.fire({
+        title: "¿Desea eliminar este gasto?",
+        text: "Esta acción no puede revertirse.",
+        icon: 'warning',
+        showCancelButton: true,
+        cancelButtonColor: 'var(--primary)',
+        confirmButtonColor: 'var(--success)',
+        confirmButtonText: '¡Eliminar!',
+        showLoaderOnConfirm: true,
+        preConfirm: () => {
+          return this.wire.destroyExpense(expense.id).then(res => res);
+        },
+        allowOutsideClick: () => !window.Swal.isLoadig()
+      }).then(result => {
+        if (result.isConfirmed) {
+          if (result.value.ok || result.value.errors.notFound) {
+            //Recupero el index de la observacion
+            let fishBatch = this.fishBatch;
+            this.dispatch('expense-was-deleted', {fishBatch, expense});
+          }
+        }
+      });
+    },
+    refresh() {
       this.observations = [];
       this.fishBatch.observations.forEach(item => {
         this.observations.push(item);
       });
+
+      this.expenses = [];
+      this.fishBatch.expenses.forEach(item => {
+        this.expenses.push(item);
+      })
     }
   }
 }

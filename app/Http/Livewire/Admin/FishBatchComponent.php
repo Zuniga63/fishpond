@@ -3,6 +3,7 @@
 namespace App\Http\Livewire\Admin;
 
 use App\Models\FishBatch;
+use App\Models\FishBatchExpense;
 use App\Models\FishBatchObservation;
 use App\Models\Fishpond;
 use App\Models\User;
@@ -93,6 +94,16 @@ class FishBatchComponent extends Component
       ->orderBy('created_at')
       ->get(['id', 'title', 'message', 'created_at as createdAt', 'updated_at as updatedAt'])
       ->toArray();
+    //Recuepero los gastos
+    $expenses = $data->expenses()
+      ->orderBy('expense_date')
+      ->get(['id', 'expense_date as date', 'description', 'amount', 'created_at as createdAt', 'updated_at as updatedAt'])
+      ->toArray();
+
+    $expenses = array_map(function ($expense) {
+      $expense['amount'] = intval($expense['amount']);
+      return $expense;
+    }, $expenses);
 
     return [
       'id' => intval($data->id),
@@ -104,6 +115,7 @@ class FishBatchComponent extends Component
       'population' => intval($data->population),
       'amount' => intval($data->amount),
       'observations' => $observations,
+      'expenses' => $expenses,
       'createdAt' => $data->created_at,
       'updatedAt' => $data->updated_at,
     ];
@@ -125,7 +137,7 @@ class FishBatchComponent extends Component
       'fishpondId' => 'required|numeric|exists:fishpond,id',
       'population' => 'required|numeric|between:1,65535',
       'averageWeight' => 'required|numeric|between:0.01,999.99',
-      'amount' => 'required|numeric|between:200,99999999.99',
+      'amount' => 'required|numeric|between:100,99999999.99',
     ];
 
     if (!$inThisMoment) {
@@ -174,6 +186,39 @@ class FishBatchComponent extends Component
     'observationId' => 'id de la observación',
     'title' => 'título',
     'message' => 'mensaje',
+  ];
+
+  protected function expenseRules(bool $inThisMoment = true, bool $setTime = false, bool $update = false)
+  {
+    $rules = [
+      'fishBatchId' => 'required|integer|min:1|exists:fish_batch,id',
+      'description' => 'required|string|min:3|max:255',
+      'amount' => 'required|numeric|between:100,99999999.99',
+    ];
+
+    if (!$inThisMoment) {
+      $rules['date'] = 'required|string|date|before_or_equal:' . Carbon::now()->format('Y-m-d');
+      if ($setTime) {
+        $rules['time'] = 'required|string|date_format:H:i';
+        $rules['fullDate'] = 'required|string|date_format:Y-m-d H:i';
+      }
+    }
+
+    if ($update) {
+      $rules['expenseId'] = 'required|integer|min:1|exists:fish_batch_expense,id';
+    }
+
+    return $rules;
+  }
+
+  protected $expenseAttributes = [
+    'fishBatchId' => 'identificador del lote',
+    'expenseId' => 'gasto',
+    'description' => 'descripción',
+    'amount' => 'importe',
+    'date' => 'fecha',
+    'time' => 'hora',
+    'fullDate' => 'fecha completa',
   ];
 
   // *===============================================*
@@ -528,6 +573,228 @@ class FishBatchComponent extends Component
       }
     } else {
       $this->doesNotPermission('eliminar observaciones');
+    }
+
+    return [
+      'ok' => $ok,
+      'errors' => $errors
+    ];
+  }
+
+  public function storeExpense(array $data)
+  {
+    $ok = false;
+    $errors = null;
+    $expense = null;
+
+    //Se crean las variables temporales
+    $inThisMoment = true;
+    $setTime = true;
+
+    if (array_key_exists('inThisMoment', $data)) {
+      $inThisMoment = $data['inThisMoment'];
+      if (array_key_exists('setTime', $data)) {
+        $setTime = $data['setTime'];
+      }
+    }
+
+    //Se obtienen las reglas y atributos
+    $rules = $this->expenseRules($inThisMoment, $setTime);
+    $attributes = $this->expenseAttributes;
+
+    if (userHasPermission('update_fish_batch')) {
+      try {
+        $inputs = Validator::make($data, $rules, [], $attributes)->validate();
+
+        //Recupero el lote de peces
+        /** @var FishBatch */
+        $fishBatch = FishBatch::find($inputs['fishBatchId'], ['id', 'seedtime']);
+
+
+        //Se crea la varible para la fecha
+        $fullDate = Carbon::now();
+        $seedtime = Carbon::createFromFormat('Y-m-d H:i:s', $fishBatch->seedtime);
+        $dateIsCorrect = true;
+
+        if (!$inThisMoment) {
+          if ($setTime) {
+            $fullDate = Carbon::createFromFormat('Y-m-d H:i', $inputs['fullDate']);
+          } else {
+            $fullDate = Carbon::createFromFormat('Y-m-d', $inputs['date'])->startOfDay();
+            $seedtimeStart = $seedtime->copy()->startOfDay();
+            $seedtimeEnd = $seedtime->copy()->endOfDay();
+
+            if ($fullDate->between($seedtimeStart, $seedtimeEnd)) {
+              $fullDate = $seedtime->copy()->addSecond();
+            }
+          }
+
+          if ($fullDate->lessThan($seedtime)) {
+            $dateIsCorrect = false;
+          }
+        }
+
+        if ($dateIsCorrect) {
+          //Se guarda la información en la base de datos
+          $expense = $fishBatch->expenses()->create([
+            'expense_date' => $fullDate->format('Y-m-d H:i:s'),
+            'description' => $inputs['description'],
+            'amount' => $inputs['amount']
+          ]);
+
+          //Se crea el objeto a retornar
+          $expense = [
+            'id' => $expense->id,
+            'fishBatchId' => $expense->fish_batch_id,
+            'date' => $fullDate->format('Y-m-d H:i:s'),
+            'description' => $expense->description,
+            'amount' => intval($expense->amount),
+            'createdAt' => $expense->created_at,
+            'updatedAt' => $expense->updated_at
+          ];
+
+          $ok = true;
+          $this->alert('Gasto Guardado', 'success');
+        } else {
+          $errors = ['fullDate' => 'La fecha es anterior a la siembra del lote.'];
+        }
+      } catch (ValidationException $valExc) {
+        $errors = $valExc->errors();
+      } catch (\Throwable $th) {
+        $this->emitError($th);
+      }
+    } else {
+      $this->doesNotPermission('crear nuevos gastos');
+    }
+
+    return [
+      'ok' => $ok,
+      'errors' => $errors,
+      'expense' => $expense,
+    ];
+  }
+
+  public function updateExpense(array $data)
+  {
+    $ok = false;
+    $errors = null;
+    $expense = null;
+
+    //Se crean las variables temporales
+    $inThisMoment = true;
+    $setTime = true;
+
+    if (array_key_exists('inThisMoment', $data)) {
+      $inThisMoment = $data['inThisMoment'];
+      if (array_key_exists('setTime', $data)) {
+        $setTime = $data['setTime'];
+      }
+    }
+
+    //Se obtienen las reglas y atributos
+    $rules = $this->expenseRules($inThisMoment, $setTime, true);
+    $attributes = $this->expenseAttributes;
+
+    if (userHasPermission('update_fish_batch')) {
+      try {
+        $inputs = Validator::make($data, $rules, [], $attributes)->validate();
+
+        //Recupero el lote de peces
+        /** @var FishBatch */
+        $fishBatch = FishBatch::find($inputs['fishBatchId'], ['id', 'seedtime']);
+
+
+        //Se crea la varible para la fecha
+        $fullDate = Carbon::now();
+        $seedtime = Carbon::createFromFormat('Y-m-d H:i:s', $fishBatch->seedtime);
+        $dateIsCorrect = true;
+
+        if (!$inThisMoment) {
+          if ($setTime) {
+            $fullDate = Carbon::createFromFormat('Y-m-d H:i', $inputs['fullDate']);
+          } else {
+            $fullDate = Carbon::createFromFormat('Y-m-d', $inputs['date'])->startOfDay();
+            $seedtimeStart = $seedtime->copy()->startOfDay();
+            $seedtimeEnd = $seedtime->copy()->endOfDay();
+
+            if ($fullDate->between($seedtimeStart, $seedtimeEnd)) {
+              $fullDate = $seedtime->copy()->addSecond();
+            }
+          }
+
+          if ($fullDate->lessThan($seedtime)) {
+            $dateIsCorrect = false;
+          }
+        }
+
+        if ($dateIsCorrect) {
+          //Se recupera el gasto
+          $expense = FishBatchExpense::find($inputs['expenseId']);
+          //Se actualiza
+          $expense->expense_date = $fullDate->format('Y-m-d H:i:s');
+          $expense->description = $inputs['description'];
+          $expense->amount = $inputs['amount'];
+          $expense->save();
+
+          //Se crea el objeto a retornar
+          $expense = [
+            'id' => $expense->id,
+            'fishBatchId' => $expense->fish_batch_id,
+            'date' => $fullDate->format('Y-m-d H:i:s'),
+            'description' => $expense->description,
+            'amount' => intval($expense->amount),
+            'createdAt' => $expense->created_at,
+            'updatedAt' => $expense->updated_at
+          ];
+
+          $ok = true;
+          $this->alert('Gasto Actualizado', 'success');
+        } else {
+          $errors = ['fullDate' => 'La fecha es anterior a la siembra del lote.'];
+        }
+      } catch (ValidationException $valExc) {
+        $errors = $valExc->errors();
+      } catch (\Throwable $th) {
+        $this->emitError($th);
+      }
+    } else {
+      $this->doesNotPermission('crear nuevos gastos');
+    }
+
+    return [
+      'ok' => $ok,
+      'errors' => $errors,
+      'expense' => $expense,
+    ];
+  }
+
+  public function destroyExpense($expenseId)
+  {
+    $ok = false;
+    $errors = null;
+    $userId = session()->get('userId');
+
+    if (userHasPermission('update_fish_batch')) {
+      //Recupero el gasto
+      /** @var FishBatchExpense */
+      $expense = FishBatchExpense::find($expenseId);
+      if($expense){
+        //Se verifica si el usuario puede eliminar el gasto
+        $userSafe = intval($expense->fishBatch->user_id) === $userId;
+        if($userSafe){
+          $expense->delete();
+          $ok = true;
+          $this->alert('Gasto eliminado');
+        }else{
+          $errors = ['unknow' => 'Intento de eliminación inválido.'];
+        }
+      }else{
+        $errors = [
+          'notFound' => true
+        ];
+      }
+    } else {
+      $this->doesNotPermission('eliminar gastos');
     }
 
     return [

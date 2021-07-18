@@ -6,6 +6,9 @@
   x-on:fish-batch-updated="updateFishBatch($event.detail.fishBatch)"
   x-on:observation-was-created="addObservation($event.detail)"
   x-on:observation-was-updated="updateObservation($event.detail)"
+  x-on:expense-was-stored="addExpense($event.detail)"
+  x-on:expense-was-updated="updateExpense($event.detail)"
+  x-on:expense-was-deleted="removeExpense($event.detail)"
   x-on:back-to-home="home = true"
   x-on:enable-form="enableForm($event.detail.formName, $event.detail.fishBatch, $event.detail.data)"
   wire:ignore
@@ -27,6 +30,7 @@
   <div x-show.transition.in.duration.300ms="formActive" style="display: none;">
     <x-admin.fish-batch.fish-batch-form/>
     <x-admin.fish-batch.fish-batch-observation-form/>
+    <x-admin.fish-batch.fish-batch-expense-form/>
   </div>
 
   {{-- BOTON PARA HABILITAR FORMULARIO DE NUEVO LOTE --}}

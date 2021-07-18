@@ -71,7 +71,7 @@
         </div>
 
         {{-- COSTOS Y GASTOS DEL LOTE --}}
-        <P class="h4 m-0 text-bold text-center" x-text="formatCurrency(batch.amount, 0)" title="Sumatoria de Costos"></P>
+        <P class="h4 m-0 text-bold text-center" x-text="formatCurrency(batch.totalAmount, 0)" title="Sumatoria de Costos"></P>
 
 
         <footer class="card-footer">

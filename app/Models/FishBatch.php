@@ -18,5 +18,10 @@ class FishBatch extends Model
     return $this->hasMany(FishBatchObservation::class, 'fish_batch_id');
   }
 
+  public function expenses()
+  {
+    return $this->hasMany(FishBatchExpense::class, 'fish_batch_id');
+  }
+
   
 }

@@ -71,10 +71,13 @@ window.app = () => {
         seedtime: dayjs(data.seedtime),
         harvest: data.harvest ? dayjs(data.harvest) : null,
         initialPopulation: data.initialPopulation,
-        population: data.population,
         initialWeight: data.initialWeight,
+        population: data.population,
         amount: data.amount,
+        expenseAmount: 0,
+        totalAmount: data.amount,
         observations: [],
+        expenses: [],
         createdAt: dayjs(data.createdAt),
         updatedAt: dayjs(data.updatedAt),
       }
@@ -84,6 +87,14 @@ window.app = () => {
         fishBatch.observations.push(this.createObservation(item));
       });
 
+      data.expenses.forEach(item => {
+        let expense = this.createExpense(item);
+        fishBatch.expenses.push(expense);
+        fishBatch.expenseAmount += expense.amount;
+        fishBatch.totalAmount += expense.amount;
+      });
+
+      fishBatch.unitPrice = _.round(fishBatch.totalAmount / fishBatch.population, 0);
 
       //Se recupea el estanque
       let fishpond = this.fishponds.find(item => item.id === data.fishpondId);
@@ -96,6 +107,20 @@ window.app = () => {
       fishBatch.age = fishBatch.harvest
         ? fishBatch.harvest.from(fishBatch.seedtime, true)
         : fishBatch.seedtime.fromNow(true);
+
+      //Se calcula la biomasa inicial
+      let initialBiomass = data.initialPopulation * data.initialWeight;
+      let initialBiomasUnit = 'g.';
+
+      if (initialBiomass >= 1000) {
+        initialBiomass = initialBiomass / 1000;
+        initialBiomasUnit = 'Kg.'
+      }
+
+      fishBatch.initialBiomass = {
+        value: _.round(initialBiomass, 2),
+        unit: initialBiomasUnit
+      };
 
       //Se calcula la biomasa
       let biomass = data.population * data.initialWeight;
@@ -111,10 +136,7 @@ window.app = () => {
         unit: biomassUnit
       };
 
-      //Se calculan las muer
-      console.log(fishBatch);
       return fishBatch;
-
     },
     /**
      * Recibe los datos puros del servidor y los convierte en una instancia
@@ -179,6 +201,17 @@ window.app = () => {
         createIsSameUpdate: dayjs(data.createdAt).isSame(dayjs(data.updatedAt)),
       };
     },
+    createExpense(data) {
+      return {
+        id: data.id,
+        date: dayjs(data.date),
+        description: data.description,
+        amount: data.amount,
+        createdAt: dayjs(data.createdAt),
+        updatedAt: dayjs(data.updatedAt),
+        createIsSameUpdate: dayjs(data.createdAt).isSame(dayjs(data.updatedAt)),
+      }
+    },
     /**
      * Cambia el valor de la varible tab y actualiza el listado de
      * lotes que se muestran en el panel principal.
@@ -205,23 +238,29 @@ window.app = () => {
     enableForm(name = null, fishBatch = null, data = null) {
       if (name) {
         this.formActive = true;
-        data = {
+        let info = {
           mode: 'register',
           fishBatch: fishBatch,
           data: data,
         }
 
         if (name === 'new-fish-batch') {
-          this.dispatch('enable-fish-batch-form', data);
+          this.dispatch('enable-fish-batch-form', info);
         } else if (name === 'update-fish-batch') {
-          data.mode = "updating";
-          this.dispatch('enable-fish-batch-form', data);
+          info.mode = "updating";
+          this.dispatch('enable-fish-batch-form', info);
         } else if (name === 'new-fish-batch-observation') {
-          this.dispatch('enable-fish-batch-observation-form', data);
+          this.dispatch('enable-fish-batch-observation-form', info);
         } else if (name === 'update-fish-batch-observation') {
-          data.mode = 'updating';
-          this.dispatch('enable-fish-batch-observation-form', data);
-        } else {
+          info.mode = 'updating';
+          this.dispatch('enable-fish-batch-observation-form', info);
+        } else if (name === "new-fish-batch-expense") {
+          this.dispatch('enable-fish-batch-expense-form', info);
+        } else if (name === 'update-fish-batch-expense') {
+          info.mode = 'updating';
+          this.dispatch('enable-fish-batch-expense-form', info);
+        }
+        else {
           this.formActive = false;
         }
       }
@@ -267,7 +306,7 @@ window.app = () => {
       //Se deshabilita el formulario
       this.formActive = false;
     },
-    updateObservation(detail){
+    updateObservation(detail) {
       //Recupero el lote de peces
       let fishBatch = this.allFishBatchs.find(batch => batch.id === detail.fishBatch.id);
       //Se crea la observación
@@ -277,12 +316,71 @@ window.app = () => {
       //Se actualizan los campos
       for (const key in observation) {
         if (Object.hasOwnProperty.call(original, key)) {
-          original[key] = observation[key];          
+          original[key] = observation[key];
         }
       }
 
       //Se deshabilita el formulario
       this.formActive = false;
+    },
+    addExpense(detail) {
+      //Recupero el lote de peces
+      let fishBatch = this.allFishBatchs.find(item => item.id === detail.fishBatch.id);
+      //Se crea la instancia del gasto
+      let expense = this.createExpense(detail.expense);
+      //Se agrega al listado
+      fishBatch.expenses.push(expense);
+      //Se actualiza los importes
+      fishBatch.expenseAmount += expense.amount;
+      fishBatch.totalAmount += expense.amount;
+      fishBatch.unitPrice = _.round(fishBatch.totalAmount / fishBatch.population, 0);
+      //Se emite el evento de que el gasto fue agregado
+      this.dispatch('expense-was-added');
+      //Se deshabilita el formulario
+      this.formActive = false;
+    },
+    updateExpense(detail) {
+      //Recupero el lote de peces
+      let fishBatch = this.allFishBatchs.find(item => item.id === detail.fishBatch.id);
+      //Se crea la instancia del gasto
+      let expense = this.createExpense(detail.expense);
+      //Se recupera el gasto original
+      let original = fishBatch.expenses.find(item => item.id === expense.id);
+      //Se descuenta el valor del original
+      fishBatch.expenseAmount -= original.amount;
+      fishBatch.totalAmount -= original.amount;
+      //Se abona el valor del gasto actualizado
+      fishBatch.expenseAmount += expense.amount;
+      fishBatch.totalAmount += expense.amount;
+      fishBatch.unitPrice = _.round(fishBatch.totalAmount / fishBatch.population, 0);
+      //Se actualiza el original
+      for (const key in expense) {
+        if (Object.hasOwnProperty.call(original, key)) {
+          original[key] = expense[key];
+        }
+      }
+      //Se emite el evento de que el gasto fue agregado
+      this.dispatch('expense-was-added');
+      //Se deshabilita el formulario
+      this.formActive = false;
+    },
+    removeExpense(detail) {
+      //Recupero el lote de peces
+      let fishBatch = this.allFishBatchs.find(item => item.id === detail.fishBatch.id);
+      //Se recupera el indice del gasto
+      let index = fishBatch.expenses.findIndex(item => item.id === detail.expense.id);
+      //Se elimina el estanque del arreglo
+      if (index >= 0) {
+        //Descontar el importe
+        fishBatch.expenseAmount -= detail.expense.amount;
+        fishBatch.totalAmount -= detail.expense.amount;
+        //Se actualiza el precio unitario
+        fishBatch.unitPrice = _.round(fishBatch.totalAmount / fishBatch.population, 0);
+
+        //Se elimina la instancia
+        fishBatch.expenses.splice(index, 1);
+        this.dispatch('expense-was-removed');
+      }
     },
     __printSubmitData(data) {
       let bodyLength = 60;
@@ -327,3 +425,4 @@ window.app = () => {
 require('./fish-batch-form');
 require('./fish-batch-component');
 require('./fish-batch-observation-form');
+require('./fish-batch-expense-form');
