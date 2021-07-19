@@ -6,6 +6,7 @@
   x-on:observation-was-updated.window="refresh"
   x-on:expense-was-added.window="refresh"
   x-on:expense-was-removed.window="refresh"
+  x-on:fish-batch-was-updated.window="refresh"
 >
   <template x-if="fishBatch">
     <div class="pb-5">
@@ -219,7 +220,7 @@
                 </p>
               </div>
 
-              {{-- INFORMACIÓN DE CREACIÓN Y ACTUALIZACIÓN --}}
+              {{-- AUDITORÍA DEL LOTE --}}
               <div>
                 <p class="mb-0 text-sm"><span class="text-bold">Registro</span>: <span x-text="fishBatch.createdAt.fromNow()"></span></p>
                 <p class="mb-0 text-sm" x-show="!fishBatch.updatedAt.isSame(fishBatch.createdAt)">
@@ -300,6 +301,68 @@
                       </p>
                       <p class="m-0 text-sm text-muted" x-show="!expense.createIsSameUpdate">
                         Actualizado: <span x-text="expense.updatedAt.fromNow()"></span>
+                      </p>
+                    </div>
+                    <!--/.edn auditoría -->
+                  </div>
+                  <!--/.end body -->
+                </div>
+              </template>
+            </div>
+
+            {{-- REPORTES DE MORTALIDAD --}}
+            <div x-show.transition.in.durations.300ms="tab === 'deaths'" style="display: none;">
+              <template x-for="deathReport in deaths" x-bind:key="deathReport.id">
+                <div class="card card-light">
+                  <header class="card-header p-2">
+                    <div class="d-flex justify-content-between items-center">
+                      <!-- Fecha y Tiempo relativo -->
+                      <div class="d-flex flex-column">
+                        <h6 class="m-0 text-bold" x-text="deathReport.createdAt.format('dddd, DD-MM-YYYY hh:mm a')"></h6>
+                        <p class="m-0 text-muted" x-text="deathReport.createdAt.fromNow()"></p>
+                      </div>
+                      <!-- Controles -->
+                      <div class="">
+                        <a href="javascript:;" class="btn btn-info btn-sm mr-1" x-on:click="updateDeathReport(deathReport)"><i class="fas fa-edit"></i></a>
+                        <a href="javascript:;" class="btn btn-danger btn-sm" x-on:click="destroyDeathReport(deathReport)"><i class="fas fa-trash"></i></a>
+                      </div>
+                      <!--/.end controles -->
+                    </div>
+                    <!--/end flex -->
+                  </header>
+        
+                  <div class="card-body p-2">
+                    <div class="row border-bottom">
+                      {{-- POBLACIÓN --}}
+                      <div class="col-5">
+                        <p class="m-0">
+                          Inicial: 
+                          <span class="text-bold" x-text="deathReport.initialPopulation"></span>
+                          <i class="fas fa-fish"></i>
+                        </p>
+                        <p class="m-0">
+                          Final: 
+                          <span class="text-bold" x-text="deathReport.population"></span>
+                          <i class="fas fa-fish"></i>
+                        </p>
+                      </div>
+                      {{-- MORTALIDAD --}}
+                      <div class="col-7">
+                        <p class="m-0">Muertes: <span class="text-bold" x-text="deathReport.deaths"></span></p>
+                        <p class="m-0">Mortalidad: <span class="text-bold" x-text="deathReport.mortality"></span>%</p>
+                      </div>
+                    </div>
+                    <div class="border-bottom text-center py-2">
+                      <p class="text-lg mb-0">Muertes totales: <span class="text-bold" x-text="deathReport.totalDeaths"></span></p>
+                      <p class="m-0 text-muted">Mortalidad Global: <span class="text-bold" x-text="deathReport.globalMortality"></span>%</p>
+                    </div>
+                    <!-- Auditoría -->
+                    <div class="d-flex flex-column">
+                      <p class="m-0 text-sm text-muted">
+                        Creado: <span x-text="deathReport.createdAt.fromNow()"></span>
+                      </p>
+                      <p class="m-0 text-sm text-muted" x-show="!deathReport.createIsSameUpdate">
+                        Actualizado: <span x-text="deathReport.updatedAt.fromNow()"></span>
                       </p>
                     </div>
                     <!--/.edn auditoría -->

@@ -21,7 +21,7 @@
 
   {{-- LOTES DE PECES --}}
   <template x-for="batch in fishBatchs" x-bind:key="batch.id">
-    <div class="card card-primary">
+    <div class="card card-dark">
       <header class="card-header">
         <div class="d-flex justify-content-between align-items-center">
           <h5 class="text-left p-0 m-0" x-text="batch.fishpond.name"></h5>
@@ -75,7 +75,7 @@
 
 
         <footer class="card-footer">
-          <button class="btn btn-primary" style="width: 100%" x-on:click="selectFishBatch(batch)">Ver más información</button>
+          <button class="btn btn-dark" style="width: 100%" x-on:click="selectFishBatch(batch)">Ver más información</button>
         </footer>
       </div>
       <!--/.end body -->

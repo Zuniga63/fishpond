@@ -46,6 +46,7 @@ window.fishBatchComponent = () => {
       this.fishpond = fishBatch.fishpond;
       this.observations = fishBatch.observations;
       this.expenses = fishBatch.expenses;
+      this.deaths = fishBatch.deathReports;
 
       //Se establece la alerta de la población inicial
       this.initialPopulationWarning = fishBatch.fishpond.capacity
@@ -71,8 +72,10 @@ window.fishBatchComponent = () => {
 
       if (this.tab === 'observations') {
         info.formName = 'new-fish-batch-observation';
-      } if (this.tab === 'expenses') {
+      } else if (this.tab === 'expenses') {
         info.formName = 'new-fish-batch-expense';
+      } else if (this.tab === 'deaths') {
+        info.formName = 'new-fish-batch-death';
       }
 
       this.dispatch('enable-form', info);
@@ -138,7 +141,39 @@ window.fishBatchComponent = () => {
           if (result.value.ok || result.value.errors.notFound) {
             //Recupero el index de la observacion
             let fishBatch = this.fishBatch;
-            this.dispatch('expense-was-deleted', {fishBatch, expense});
+            this.dispatch('expense-was-deleted', { fishBatch, expense });
+          }
+        }
+      });
+    },
+    updateDeathReport(report) {
+      let formName = 'update-fish-batch-death';
+      let fishBatch = this.fishBatch;
+      let data = report;
+      this.dispatch('enable-form', { formName, fishBatch, data });
+    },
+    destroyDeathReport(report) {
+      window.Swal.fire({
+        title: "¿Desea eliminar este reporte?",
+        text: "Esta acción no puede revertirse.",
+        icon: 'warning',
+        showCancelButton: true,
+        cancelButtonColor: 'var(--primary)',
+        confirmButtonColor: 'var(--success)',
+        confirmButtonText: '¡Eliminar!',
+        showLoaderOnConfirm: true,
+        preConfirm: () => {
+          return this.wire.destroyDeathReport(report.id).then(res => res);
+        },
+        allowOutsideClick: () => !window.Swal.isLoadig()
+      }).then(result => {
+        if (result.isConfirmed) {
+          if (result.value.ok || result.value.errors.notFound) {
+            //Recupero el index de la observacion
+            let fishBatch = this.fishBatch;
+            this.dispatch('death-was-deleted', { fishBatch, report });
+          } else {
+            console.log(res.value.errors);
           }
         }
       });
@@ -152,6 +187,11 @@ window.fishBatchComponent = () => {
       this.expenses = [];
       this.fishBatch.expenses.forEach(item => {
         this.expenses.push(item);
+      })
+
+      this.deaths = [];
+      this.fishBatch.deathReports.forEach(report => {
+        this.deaths.push(report);
       })
     }
   }

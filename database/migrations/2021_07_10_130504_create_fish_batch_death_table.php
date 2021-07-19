@@ -17,7 +17,6 @@ class CreateFishBatchDeathTable extends Migration
       $table->id();
       $table->foreignId('fish_batch_id')->constrained('fish_batch')->cascadeOnDelete();
       $table->unsignedSmallInteger('deaths');
-      $table->unsignedSmallInteger('population');
       $table->timestamps();
     });
   }

@@ -55,9 +55,9 @@ window.app = () => {
 
       //Se seleccionan los lotes que están sembrados
       this.updateFishBatchList();
-      setTimeout(() => {
-        this.selectFishBatch(this.fishBatchs[0]);
-      }, 1000);
+      // setTimeout(() => {
+      //   this.selectFishBatch(this.fishBatchs[0]);
+      // }, 1000);
     },
     /**
          * Cambia el valor de la varible tab y actualiza el listado de
@@ -106,6 +106,11 @@ window.app = () => {
         } else if (name === 'update-fish-batch-expense') {
           info.mode = 'updating';
           this.dispatch('enable-fish-batch-expense-form', info);
+        } else if (name === 'new-fish-batch-death') {
+          this.dispatch('enable-fish-batch-death-form', info);
+        } else if (name === 'update-fish-batch-death') {
+          info.mode = 'updating';
+          this.dispatch('enable-fish-batch-death-form', info);
         }
         else {
           this.formActive = false;
@@ -138,6 +143,7 @@ window.app = () => {
         observations: [],
         expenses: [],
         biometries: [],
+        deathReports: [],
         createdAt: dayjs(data.createdAt),
         updatedAt: dayjs(data.updatedAt),
         //Variables monetarias
@@ -149,6 +155,9 @@ window.app = () => {
         initialBiomass: null,                 //Biomasa teniendo encuenta los datos de siembre
         averageWeight: data.initialWeight,    //Peso promedio del la ultima biometría o por defecto peso inicial
         biomass: null,                        //La biomasa teniendo en cuenta el peso promedio
+        //Variable relacionadas a la mortalidad
+        totalDeaths: 0,
+        mortality: 0,
       }
 
       //Se crean las observaciones
@@ -161,7 +170,7 @@ window.app = () => {
       //TODO
 
       //Se crean los registros de las muertes
-      //TODO
+      data.deaths.forEach(record => { fishBatch.deathReports.push(this.createDeathReport(record)); })
 
       //Se crean los registros de las dosificaciones
       //TODO
@@ -171,10 +180,7 @@ window.app = () => {
       fishpond.seed(data.population);
       fishBatch.fishpond = fishpond;
 
-      //Se actualiza la biomasa
-      this.__updateBiomassParameters(fishBatch);
-      //Se actualizan los parametros monetarios
-      this.__updateMonetaryParameters(fishBatch);
+      this.__updateAllParameters(fishBatch);
 
       return fishBatch;
     },
@@ -204,7 +210,7 @@ window.app = () => {
           : null;
       } else if (data.type === 'circular') {
         fishpond.area = data.diameter
-          ? _.round(Math.PI * Math.pow((data.diameter / 2.0), 1))
+          ? _.round(Math.PI * Math.pow((data.diameter / 2.0), 2))
           : null;
       }
 
@@ -251,6 +257,25 @@ window.app = () => {
         createdAt: dayjs(data.createdAt),
         updatedAt: dayjs(data.updatedAt),
         createIsSameUpdate: dayjs(data.createdAt).isSame(dayjs(data.updatedAt)),
+      }
+    },
+    createDeathReport(data) {
+      return {
+        id: data.id,
+        deaths: data.deaths,
+        totalDeaths: 0,
+        initialPopulation: null,
+        population: null,
+        mortality: null,
+        globalMortality: null,
+        createdAt: dayjs(data.createdAt),
+        updatedAt: dayjs(data.updatedAt),
+        createIsSameUpdate: dayjs(data.createdAt).isSame(dayjs(data.updatedAt)),
+        setPopulation(population) {
+          this.initialPopulation = population;
+          this.population = population - this.deaths;
+          this.mortality = _.round((this.deaths / population * 100), 2)
+        }
       }
     },
     // *===============================================*
@@ -361,6 +386,57 @@ window.app = () => {
         this.dispatch('expense-was-removed');
       }
     },
+    addDeathReport(detail) {
+      //Recupero el lote de peces
+      let fishBatch = this.allFishBatchs.find(item => item.id === detail.fishBatch.id);
+      //Se crea el reporte de muertes
+      let report = this.createDeathReport(detail.death);
+      //Se guarda el reporte
+      fishBatch.deathReports.push(report);
+      //Se diminuye la población
+      fishBatch.population -= report.deaths;
+      //Se actualizna los parametros
+      this.__updateAllParameters(fishBatch, true);
+
+      this.formActive = false;
+    },
+    updateDeathReport(detail) {
+      //Recupero el lote de peces
+      let fishBatch = this.allFishBatchs.find(item => item.id === detail.fishBatch.id);
+      //Se crea el reporte de muertes
+      let report = this.createDeathReport(detail.death);
+      //Recupero el reporte original
+      let original = fishBatch.deathReports.find(item => item.id === report.id);
+
+      //Se actualizan las poblaciones
+      fishBatch.population += original.deaths - report.deaths;
+
+      //Se actualiza el reporte 
+      for (const key in report) {
+        if (Object.hasOwnProperty.call(original, key)) {
+          original[key] = report[key];
+        }
+      }
+
+      //Se actualizna los parametros
+      this.__updateAllParameters(fishBatch, true);
+
+      this.formActive = false;
+    },
+    removeDeathReport(detail){
+      //Recupero el lote de peces
+      let fishBatch = this.allFishBatchs.find(item => item.id === detail.fishBatch.id);
+      //Actualizo la población
+      fishBatch.population += detail.report.deaths;
+      //Se recupera el indice del reporte
+      let index = fishBatch.deathReports.findIndex(item => item.id === detail.report.id);
+
+      if (index >= 0) {
+        //Se elimina la instancia
+        fishBatch.deathReports.splice(index, 1);
+        this.__updateAllParameters(fishBatch, true);
+      }
+    },
     // *===============================================*
     // *================= UTILIDADES ==================*
     // *===============================================*
@@ -378,9 +454,9 @@ window.app = () => {
       let weight = fishBatch.biomass ? fishBatch.averageWeight * fishBatch.population : null;
       let price = null;
 
-      if(weight){
+      if (weight) {
         weight = weight / 1000;
-        price = _.round(totalAmount/weight, 0);
+        price = _.round(totalAmount / weight, 0);
       }
 
       //Se actualiza el objeto
@@ -392,14 +468,13 @@ window.app = () => {
     /**
      * Se encarga de actualizar los parametros referentes a la
      * biomasa del lote y su evolución con respecto a todas las biometrías
-     * realizadas en campo.
+     * realizadas en campo. ademas completa los reportes de muertes y las biometrías.
      * @param {*} fishBatch Instancia del lote a actualizar
      */
     __updateBiomassParameters(fishBatch) {
       let initialBiomass = { value: null, unit: 'g.' }
       let biomass = { value: null, unit: 'g.' }
-      let averageWeight = fishBatch.initialWeight;
-      //Metodo para recupera el ultimo peso promedio
+      let averageWeight = fishBatch.averageWeight;
 
       initialBiomass.value = fishBatch.initialPopulation * fishBatch.initialWeight;
       if (initialBiomass.value >= 1000) {
@@ -417,6 +492,58 @@ window.app = () => {
       fishBatch.initialBiomass = initialBiomass;
       fishBatch.biomass = biomass;
 
+      //Se actualizan las
+
+    },
+    /**
+     * Se encarga de completar o actualizar los reportes de las muertes agregando
+     * el valor de la población a cada instnacia y de recuperar de paso 
+     * el ultimo valor medido del peso promedio.
+     * @param {*} fishBatch Instancia del lote a actualizar
+     */
+    __updateBiometriesAndDeaths(fishBatch) {
+      let population = fishBatch.initialPopulation;
+      let totalDeaths = 0;
+      let mortality = 0;
+      let averageWeight = fishBatch.initialWeight;
+      let indexBiometry = 0, indexDeath = 0;
+
+      /** 
+       * Se recorren todas las muertes para ir actualizando el numero de la población
+       * y mientras esto ocurre se van actualizando todas las biometrías que sean anterior a 
+       * los reportes de muertes.
+       */
+      fishBatch.deathReports.forEach(report => {
+        //Se actualizan variables globales
+        totalDeaths += report.deaths;
+        mortality = _.round((totalDeaths / fishBatch.initialPopulation) * 100, 2);
+        //Se actualiza el reporte
+        report.setPopulation(population);
+        report.globalMortality = mortality;
+        report.totalDeaths = totalDeaths;
+        if (indexBiometry < fishBatch.biometries.length) {
+          //TODO: codigo que va completando las biometrías y recuperando el peso promedio
+        }
+
+        //Se disminuye la población
+        population -= report.deaths;
+      });
+
+      //Finalmente se actualizan las biometrías falstantes
+      for (let index = indexBiometry; index < fishBatch.biometries.length; index++) {
+        //TODo: codigo que va completando las biometrías y recuperando el peso promedio.
+      }
+
+      fishBatch.averageWeight = averageWeight;
+    },
+    __updateAllParameters(fishBatch, emitEvent = false) {
+      this.__updateBiometriesAndDeaths(fishBatch);
+      this.__updateBiomassParameters(fishBatch);
+      this.__updateMonetaryParameters(fishBatch);
+
+      if (emitEvent) {
+        this.dispatch('fish-batch-was-updated')
+      }
     },
     __printSubmitData(data) {
       let bodyLength = 60;
@@ -449,3 +576,4 @@ require('./fish-batch-form');
 require('./fish-batch-component');
 require('./fish-batch-observation-form');
 require('./fish-batch-expense-form');
+require('./fish-batch-death-form');

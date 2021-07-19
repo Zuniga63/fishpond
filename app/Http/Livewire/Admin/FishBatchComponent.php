@@ -3,6 +3,7 @@
 namespace App\Http\Livewire\Admin;
 
 use App\Models\FishBatch;
+use App\Models\FishBatchDeath;
 use App\Models\FishBatchExpense;
 use App\Models\FishBatchObservation;
 use App\Models\Fishpond;
@@ -105,6 +106,11 @@ class FishBatchComponent extends Component
       return $expense;
     }, $expenses);
 
+    //Recupero las muertes
+    $deaths = $data->deaths()->orderBy('created_at')
+      ->get(['id', 'deaths', 'created_at as createdAt', 'updated_at as updatedAt'])
+      ->toArray();
+
     return [
       'id' => intval($data->id),
       'fishpondId' => intval($data->fishpond_id),
@@ -116,6 +122,7 @@ class FishBatchComponent extends Component
       'amount' => intval($data->amount),
       'observations' => $observations,
       'expenses' => $expenses,
+      'deaths' => $deaths,
       'createdAt' => $data->created_at,
       'updatedAt' => $data->updated_at,
     ];
@@ -219,6 +226,26 @@ class FishBatchComponent extends Component
     'date' => 'fecha',
     'time' => 'hora',
     'fullDate' => 'fecha completa',
+  ];
+
+  protected function deathsRules(bool $update = false)
+  {
+    $rules = [
+      'fishBatchId' => 'required|integer|min:1|exists:fish_batch,id',
+      'deaths' => 'required|integer|min:1|max:65535'
+    ];
+
+    if ($update) {
+      $rules['deathId'] = 'required|integer|min:|exists:fish_batch_death,id';
+    }
+
+    return $rules;
+  }
+
+  protected $deathAttributes = [
+    'fishBatchId' => 'identificador del lote',
+    'deaths' => 'numero de muertes',
+    'deathId' => 'identificador de las muertes'
   ];
 
   // *===============================================*
@@ -778,23 +805,186 @@ class FishBatchComponent extends Component
       //Recupero el gasto
       /** @var FishBatchExpense */
       $expense = FishBatchExpense::find($expenseId);
-      if($expense){
+      if ($expense) {
         //Se verifica si el usuario puede eliminar el gasto
         $userSafe = intval($expense->fishBatch->user_id) === $userId;
-        if($userSafe){
+        if ($userSafe) {
           $expense->delete();
           $ok = true;
           $this->alert('Gasto eliminado');
-        }else{
+        } else {
           $errors = ['unknow' => 'Intento de eliminación inválido.'];
         }
-      }else{
-        $errors = [
-          'notFound' => true
-        ];
+      } else {
+        $errors = ['notFound' => true];
       }
     } else {
       $this->doesNotPermission('eliminar gastos');
+    }
+
+    return [
+      'ok' => $ok,
+      'errors' => $errors
+    ];
+  }
+
+  public function storeDeathReport(array $data)
+  {
+    $ok = false;
+    $errors = null;
+    $death = null;
+
+    $rules = $this->deathsRules();
+    $attributes = $this->deathAttributes;
+
+    if (userHasPermission('update_fish_batch')) {
+      try {
+        $inputs = Validator::make($data, $rules, [], $attributes)->validate();
+
+        //Recupero el lote de peces
+        /** @var FishBatch */
+        $fishBatch = FishBatch::find($inputs['fishBatchId'], ['id', 'population']);
+        $population = intval($fishBatch->population);
+
+        if ($population >= $inputs['deaths']) {
+          //Se inicia la transacción
+          DB::beginTransaction();
+          //Creo el reporte de muertes
+          $death = $fishBatch->deaths()->create(['deaths' => $inputs['deaths']]);
+          //Disminuyo la población de peces del estanque
+          $fishBatch->population = $population - $inputs['deaths'];
+          $fishBatch->save();
+
+          DB::commit();
+          //Construyo el objeto de retorno
+          $death = [
+            'id' => $death->id,
+            'fishBatchId' => $fishBatch->id,
+            'deaths' => $death->deaths,
+            'createdAt' => $death->created_at,
+            'updatedAt' => $death->updated_at
+          ];
+
+          $ok = true;
+          $this->alert('Se guardó exitosamente', 'success');
+        } else {
+          $errors = ['deaths' => 'las muerte superan la población del lote.'];
+        }
+      } catch (ValidationException $valExc) {
+        $errors = $valExc->errors();
+      } catch (\Throwable $th) {
+        $this->emitError($th);
+      }
+    } else {
+      $this->doesNotPermission('agregar registro de muertes');
+    }
+
+    return [
+      'ok' => $ok,
+      'errors' => $errors,
+      'death' => $death
+    ];
+  }
+
+  public function updateDeathReport(array $data)
+  {
+    $ok = false;
+    $errors = null;
+    $death = null;
+
+    $rules = $this->deathsRules(true);
+    $attributes = $this->deathAttributes;
+
+    if (userHasPermission('update_fish_batch')) {
+      try {
+        $inputs = Validator::make($data, $rules, [], $attributes)->validate();
+
+        //Recupero el lote de peces
+        /** @var FishBatch */
+        $fishBatch = FishBatch::find($inputs['fishBatchId'], ['id', 'population']);
+        $population = intval($fishBatch->population);
+
+
+        if ($population >= $inputs['deaths']) {
+          //Se inicia la transacción
+          DB::beginTransaction();
+          //Recupero el reporte
+          $death = FishBatchDeath::find($inputs['deathId']);
+          //Se anulan las muertes del deporte
+          $population += $death->deaths;
+          //Se actualiza el reporte
+          $death->deaths = $inputs['deaths'];
+          $death->save();
+          //Se disminuye la población del estanque
+          $fishBatch->population = $population - $inputs['deaths'];
+          $fishBatch->save();
+
+          DB::commit();
+          //Construyo el objeto de retorno
+          $death = [
+            'id' => $death->id,
+            'fishBatchId' => $fishBatch->id,
+            'deaths' => $death->deaths,
+            'createdAt' => $death->created_at,
+            'updatedAt' => $death->updated_at
+          ];
+
+          $ok = true;
+          $this->alert('Se actualizó exitosamente', 'success');
+        } else {
+          $errors = ['deaths' => 'las muerte superan la población del lote.'];
+        }
+      } catch (ValidationException $valExc) {
+        $errors = $valExc->errors();
+      } catch (\Throwable $th) {
+        $this->emitError($th);
+      }
+    } else {
+      $this->doesNotPermission('agregar registro de muertes');
+    }
+
+    return [
+      'ok' => $ok,
+      'errors' => $errors,
+      'death' => $death
+    ];
+  }
+
+  public function destroyDeathReport(int $deathId)
+  {
+    $ok = false;
+    $errors = null;
+    $userId = session()->get('userId');
+
+    if (userHasPermission('update_fish_batch')) {
+      //Recupero el reporte
+      /** @var FishBatchDeath */
+      $report = FishBatchDeath::find($deathId, ['id', 'fish_batch_id', 'deaths']);
+      //Recupero el lote de peces
+      if ($report) {
+        $fishBatch = FishBatch::find($report->fish_batch_id, ['id', 'population', 'user_id']);
+        if ($fishBatch->user_id === $userId) {
+          $population = $fishBatch->population;
+          $population += $report->deaths;
+
+          DB::beginTransaction();
+          //Se actualiza el lote
+          $fishBatch->population = $population;
+          $fishBatch->save();
+          //Se elimina el reporte
+          $report->delete();
+          DB::commit();
+
+          $ok = true;
+          $this->alert('¡Reporte Eliminado!', 'success');
+        } else {
+          $this->alert('¡Eliminación Ilegal!', 'error');
+        }
+      } else {
+        $errors = ['notFound' => true];
+      }
+    } else {
+      $this->doesNotPermission('eliminar registros');
     }
 
     return [
