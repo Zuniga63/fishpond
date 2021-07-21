@@ -1,4 +1,4 @@
-import input from './Input';
+import input from '../input';
 /**
  * Componente encargado de controlar el registro 
  * y la actalización de los estanques de peces.

@@ -1,4 +1,4 @@
-import input from './Input';
+import input from '../input';
 
 const costForm = () => {
   return {
