@@ -163,7 +163,7 @@
                   {{-- PESO PROMEDIO --}}
                   <p class="m-0">
                     <span class="text-bold">Peso Prom.</span>: 
-                    <span x-text="fishBatch.averageWeight"></span> g.
+                    <span x-text="round(fishBatch.averageWeight, 2)"></span> g.
                   </p>
 
                   {{-- DENSIDADES --}}
@@ -369,6 +369,120 @@
                   </div>
                   <!--/.end body -->
                 </div>
+              </template>
+            </div>
+
+            {{-- BIOMETRÍAS --}}
+            <div x-show.transition.in.durations.300ms="tab === 'biometries'" style="display: none;">
+              <template x-for="(biometry, index) in biometries" x-bind:key="biometry.id">
+                {{-- card --}}
+                <div class="card mb-3" x-bind:class="{'card-light': index % 2 === 0, 'card-dark': index % 2 !== 0}">
+                  {{-- HEADER --}}
+                  <header class="card-header p-2">
+                    <div class="d-flex justify-content-between items-center">
+                      <!-- Fecha y Tiempo relativo -->
+                      <div class="d-flex flex-column">
+                        <h6 class="m-0 text-bold" x-text="biometry.date.format('dddd, DD-MM-YYYY hh:mm a')"></h6>
+                        <p class="m-0 text-muted" x-text="biometry.date.fromNow()"></p>
+                      </div>
+                      <!-- Controles -->
+                      <div class="">
+                        <a href="javascript:;" class="btn btn-info btn-sm mr-1" x-on:click="updateBiometry(biometry)"><i class="fas fa-edit"></i></a>
+                        <a href="javascript:;" class="btn btn-danger btn-sm" x-on:click="destroyBiometry(biometry)"><i class="fas fa-trash"></i></a>
+                      </div>
+                      <!--/.end controles -->
+                    </div>
+                    <!--/end flex -->
+                  </header>
+        
+                  {{-- BODY --}}
+                  <div class="card-body p-2">
+                    <div class="row border-bottom">
+                      {{-- INFORMACIÓN DE LA MUESTRA --}}
+                      <div class="col-6">
+                        {{-- POBLACIÓN --}}
+                        <p class="m-0">
+                          Población: 
+                          <span class="text-bold" x-text="biometry.population"></span>
+                          <i class="fas fa-fish"></i>
+                        </p>
+                        {{-- TAMAÑO DE LA MUESTRA --}}
+                        <p class="m-0">
+                          Muestra: 
+                          <span class="text-bold" x-text="biometry.sampleSize"></span>
+                          <i class="fas fa-fish"></i>
+                          &#40;<span class="text-muted" x-text="biometry.samplePercentage"></span>&#37;&#41;
+                        </p>
+                        {{-- PESO PROMEDIO PROMEDIO --}}
+                        <p class="m-0" x-show="biometry.averageWeight">
+                          Peso Prom: 
+                          <span class="text-bold" x-text="biometry.averageWeight ? round(biometry.averageWeight, 2) : 0"></span>
+                          g.
+                        </p>
+                        {{-- PROMEDIO --}}
+                        <p class="m-0" x-show="biometry.averageLong">
+                          Long. Prom: 
+                          <span class="text-bold" x-text="biometry.averageLong ? round(biometry.averageLong, 2) : 0"></span>
+                          cm.
+                        </p>
+                      </div>
+
+                      <div class="col-16">
+                        {{-- BIOMASA INICIAL --}}
+                        <p class="m-0">
+                          Biomasa: 
+                          <span x-text="round(biometry.biomass.value,2)" class="text-bold">
+                          </span> <i x-text="biometry.biomass.unit"></i>
+                        </p>
+                      </div>
+                    </div>
+
+                    {{-- MEDICIONES --}}
+                    <div class="row border">
+                      <p class="text-bold text-center text-lg col-12 mb-0 p-1 border-bottom">Mediciones</p>
+                      <table class="table table-sm table-striped table-bordered mb-2">
+                        <thead class="thead-dark">
+                          <tr>
+                            <th scope="col">#</th>
+                            <th scope="col" class="text-center">
+                              Peso <span class="text-muted">[g]</span>
+                            </th>
+                            <th scope="col" class="text-center">
+                              Largo <span class="text-muted">[cm]</span>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <template x-for="(measuring, index) in biometry.measurements" x-bind:key="index">
+                            <tr>
+                              <th scope="row" x-text="index + 1"></th>
+                              <th class="text-center" x-text="measuring.weight"></th>
+                              <th class="text-center" x-text="measuring.long"></th>
+                            </tr>
+                          </template>
+                          <tr>
+                            <th scope="row">Total</th>
+                            <th class="text-center" x-text="biometry.totalWeight"></th>
+                            <th class="text-center" x-text="biometry.totalLong"></th>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <!-- Auditoría -->
+                    <div class="d-flex flex-column">
+                      <p class="m-0 text-sm text-muted">
+                        Creado: <span x-text="biometry.createdAt.fromNow()"></span>
+                      </p>
+                      <p class="m-0 text-sm text-muted" x-show="!biometry.createIsSameUpdate">
+                        Actualizado: <span x-text="biometry.updatedAt.fromNow()"></span>
+                      </p>
+                    </div>
+                    <!--/.edn auditoría -->
+                  </div>
+                  <!--/.end body -->
+                </div>
+                <!--/.end card -->
               </template>
             </div>
           

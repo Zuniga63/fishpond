@@ -17,7 +17,7 @@ class CreateFishBatchBiometryTable extends Migration
       $table->id();
       $table->foreignId('fish_batch_id')->constrained('fish_batch')->cascadeOnDelete();
       $table->timestamp('biometry_date');
-      $table->unsignedSmallInteger('population');
+      $table->json('measurements');
       $table->timestamps();
     });
   }

@@ -1,17 +1,38 @@
 const _ = require("lodash");
+window.round = _.round;
 
 const dayjs = require("dayjs");
 require('dayjs/locale/es-do');
 
 //Se adiciona el pluging para tiempo relativo
-let relativeTime = require('dayjs/plugin/relativeTime');
+var relativeTime = require('dayjs/plugin/relativeTime');
 dayjs.extend(relativeTime);
 
-let isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
+var isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
 dayjs.extend(isSameOrBefore);
 
 //Se establece en español
 dayjs.locale('es-do');
+
+/**
+ * Este metodo sirve para poder ordenar instancias segun
+ * su fecha.
+ * @param {*} item1 Instancia con un objeto tipo dayje
+ * @param {*} item2 Instancia con un objeto tipo dayjs
+ * @returns int
+ */
+const sortByDate = (item1, item2) => {
+  if (item1.date.isAfter(item2.date)) {
+    return 1;
+  }
+
+  if (item1.date.isBefore(item2.date)) {
+    return -1;
+  }
+
+  return 0;
+
+}
 
 
 window.app = () => {
@@ -111,6 +132,11 @@ window.app = () => {
         } else if (name === 'update-fish-batch-death') {
           info.mode = 'updating';
           this.dispatch('enable-fish-batch-death-form', info);
+        } else if (name === 'new-fish-batch-biometry') {
+          this.dispatch('enable-fish-batch-biometry-form', info);
+        } else if (name === 'update-fish-batch-biometry') {
+          info.mode = 'updating';
+          this.dispatch('enable-fish-batch-biometry-form', info);
         }
         else {
           this.formActive = false;
@@ -167,10 +193,10 @@ window.app = () => {
       data.expenses.forEach(item => { fishBatch.expenses.push(this.createExpense(item)); });
 
       //Se crean las biometrias
-      //TODO
+      data.biometries.forEach(record => { fishBatch.biometries.push(this.createBiometry(record)); })
 
       //Se crean los registros de las muertes
-      data.deaths.forEach(record => { fishBatch.deathReports.push(this.createDeathReport(record)); })
+      data.deaths.forEach(record => { fishBatch.deathReports.push(this.createDeathReport(record)); });
 
       //Se crean los registros de las dosificaciones
       //TODO
@@ -275,6 +301,57 @@ window.app = () => {
           this.initialPopulation = population;
           this.population = population - this.deaths;
           this.mortality = _.round((this.deaths / population * 100), 2)
+        }
+      }
+    },
+    createBiometry(data) {
+      let measurements = data.measurements;
+      let sampleSize = 0;
+      let totalWeight = 0;
+      let averageWeight = 0;
+      let totalLong = 0;
+      let averageLong = 0;
+
+      measurements.forEach(measuring => {
+        sampleSize++;
+        totalWeight += measuring.weight ? measuring.weight : 0;
+        totalLong += measuring.long ? measuring.long : 0;
+      });
+
+      if (sampleSize > 0) {
+        averageWeight = totalWeight / sampleSize;
+        averageLong = _.round(totalLong / sampleSize, 2);
+      }
+
+      sampleSize = sampleSize || null;
+      totalWeight = totalWeight || null;
+      averageWeight = averageWeight || null;
+      totalLong = totalLong || null;
+      averageLong = averageLong || null;
+
+      return {
+        id: data.id,
+        date: dayjs(data.date),
+        measurements: data.measurements,
+        sampleSize,
+        samplePercentage: null,
+        totalWeight,
+        averageWeight,
+        totalLong,
+        averageLong,
+        population: null,
+        biomass: { value: null, unit: 'g' },
+        createdAt: dayjs(data.createdAt),
+        updatedAt: dayjs(data.updatedAt),
+        createIsSameUpdate: dayjs(data.createdAt).isSame(dayjs(data.updatedAt)),
+        setPopulation(population) {
+          this.population = population;
+          this.biomass.value = population * this.averageWeight;
+          if (this.biomass.value >= 1000) {
+            this.biomass.value = this.biomass.value / 1000;
+            this.biomass.unit = 'Kg.'
+          }
+          this.samplePercentage = _.round((this.sampleSize / population) * 100, 1);
         }
       }
     },
@@ -423,7 +500,7 @@ window.app = () => {
 
       this.formActive = false;
     },
-    removeDeathReport(detail){
+    removeDeathReport(detail) {
       //Recupero el lote de peces
       let fishBatch = this.allFishBatchs.find(item => item.id === detail.fishBatch.id);
       //Actualizo la población
@@ -434,6 +511,54 @@ window.app = () => {
       if (index >= 0) {
         //Se elimina la instancia
         fishBatch.deathReports.splice(index, 1);
+        this.__updateAllParameters(fishBatch, true);
+      }
+    },
+    addBiometry(detail) {
+      //Recupero el lote de peces
+      let fishBatch = this.allFishBatchs.find(item => item.id === detail.fishBatch.id);
+      //Se crea la instancia de la biometría
+      let biometry = this.createBiometry(detail.biometry);
+      //Se adiciona al listado
+      fishBatch.biometries.push(biometry);
+      //Se ordena el arreglo
+      fishBatch.biometries.sort(sortByDate);
+      //Se actualizna los parametros
+      this.__updateAllParameters(fishBatch, true);
+
+      this.formActive = false;
+    },
+    updateBiometry(detail) {
+      //Recupero el lote de peces
+      let fishBatch = this.allFishBatchs.find(item => item.id === detail.fishBatch.id);
+      //Se crea la instancia de la biometría
+      let biometry = this.createBiometry(detail.biometry);
+      //recupero la original
+      let original = fishBatch.biometries.find(item => item.id === biometry.id);
+      //Se actualiza la original
+      for (const key in biometry) {
+        if (Object.hasOwnProperty.call(original, key)) {
+          original[key] = biometry[key];
+        }
+      }
+
+      //Se ordena el arreglo
+      fishBatch.biometries.sort(sortByDate);
+
+      //Se actualizna los parametros
+      this.__updateAllParameters(fishBatch, true);
+
+      this.formActive = false;
+    },
+    removeBiometry(detail) {
+      //Recupero el lote de peces
+      let fishBatch = this.allFishBatchs.find(item => item.id === detail.fishBatch.id);
+      //Recupero el indice de la biometría
+      let index = fishBatch.biometries.findIndex(item => item.id === detail.biometry.id);
+
+      if (index >= 0) {
+        //Se elimina la instancia
+        fishBatch.biometries.splice(index, 1);
         this.__updateAllParameters(fishBatch, true);
       }
     },
@@ -506,7 +631,8 @@ window.app = () => {
       let totalDeaths = 0;
       let mortality = 0;
       let averageWeight = fishBatch.initialWeight;
-      let indexBiometry = 0, indexDeath = 0;
+      let indexBiometry = 0;
+      let biometry = null;
 
       /** 
        * Se recorren todas las muertes para ir actualizando el numero de la población
@@ -521,9 +647,25 @@ window.app = () => {
         report.setPopulation(population);
         report.globalMortality = mortality;
         report.totalDeaths = totalDeaths;
+
         if (indexBiometry < fishBatch.biometries.length) {
-          //TODO: codigo que va completando las biometrías y recuperando el peso promedio
-        }
+          biometry = fishBatch.biometries[indexBiometry];
+          while (biometry.date.isBefore(report.createdAt)) {
+            //Se actualizan los parametros de la biometría
+            biometry.setPopulation(population);
+            //Se recupera el peso promedio
+            averageWeight = biometry.averageWeight;
+            //Se incrementa el index
+            indexBiometry++;
+            //Se verifica nuevmente que existan datos
+            if (indexBiometry < fishBatch.biometries.length) {
+              //Se refresca la istancia
+              biometry = fishBatch.biometries[indexBiometry];
+            } else {
+              break;
+            }
+          }//.end while
+        }//.end if
 
         //Se disminuye la población
         population -= report.deaths;
@@ -531,7 +673,11 @@ window.app = () => {
 
       //Finalmente se actualizan las biometrías falstantes
       for (let index = indexBiometry; index < fishBatch.biometries.length; index++) {
-        //TODo: codigo que va completando las biometrías y recuperando el peso promedio.
+        let biometry = fishBatch.biometries[index];
+        //Se actualizan los parametros de la biometría
+        biometry.setPopulation(population);
+        //Se recupera el peso promedio
+        averageWeight = biometry.averageWeight;
       }
 
       fishBatch.averageWeight = averageWeight;
@@ -577,3 +723,4 @@ require('./fish-batch-component');
 require('./fish-batch-observation-form');
 require('./fish-batch-expense-form');
 require('./fish-batch-death-form');
+require('./fish-batch-biometry-form');

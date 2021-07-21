@@ -12,6 +12,9 @@
   x-on:death-was-stored="addDeathReport($event.detail)"
   x-on:death-was-updated="updateDeathReport($event.detail)"
   x-on:death-was-deleted="removeDeathReport($event.detail)"
+  x-on:biometry-was-stored="addBiometry($event.detail)"
+  x-on:biometry-was-updated="updateBiometry($event.detail)"
+  x-on:biometry-was-deleted="removeBiometry($event.detail)"
   x-on:back-to-home="home = true"
   x-on:enable-form="enableForm($event.detail.formName, $event.detail.fishBatch, $event.detail.data)"
   wire:ignore
@@ -35,6 +38,7 @@
     <x-admin.fish-batch.fish-batch-observation-form/>
     <x-admin.fish-batch.fish-batch-expense-form/>
     <x-admin.fish-batch.fish-batch-deaths-form/>
+    <x-admin.fish-batch.fish-batch-biometry-form/>
   </div>
 
   {{-- BOTON PARA HABILITAR FORMULARIO DE NUEVO LOTE --}}

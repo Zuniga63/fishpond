@@ -47,6 +47,7 @@ window.fishBatchComponent = () => {
       this.observations = fishBatch.observations;
       this.expenses = fishBatch.expenses;
       this.deaths = fishBatch.deathReports;
+      this.biometries = fishBatch.biometries;
 
       //Se establece la alerta de la población inicial
       this.initialPopulationWarning = fishBatch.fishpond.capacity
@@ -76,6 +77,8 @@ window.fishBatchComponent = () => {
         info.formName = 'new-fish-batch-expense';
       } else if (this.tab === 'deaths') {
         info.formName = 'new-fish-batch-death';
+      } else if (this.tab === 'biometries') {
+        info.formName = 'new-fish-batch-biometry';
       }
 
       this.dispatch('enable-form', info);
@@ -178,6 +181,40 @@ window.fishBatchComponent = () => {
         }
       });
     },
+    updateBiometry(biometry) {
+      let formName = 'update-fish-batch-biometry';
+      let fishBatch = this.fishBatch;
+      let data = biometry;
+
+      this.dispatch('enable-form', { formName, fishBatch, data });
+    },
+    destroyBiometry(biometry) {
+      window.Swal.fire({
+        title: "¿Desea eliminar este reporte?",
+        text: "Esta acción no puede revertirse.",
+        icon: 'warning',
+        showCancelButton: true,
+        cancelButtonColor: 'var(--primary)',
+        confirmButtonColor: 'var(--success)',
+        confirmButtonText: '¡Eliminar!',
+        showLoaderOnConfirm: true,
+        preConfirm: () => {
+          return this.wire.destroyBiometry(biometry.id).then(res => res);
+        },
+        allowOutsideClick: () => !window.Swal.isLoadig()
+      }).then(result => {
+        if (result.isConfirmed) {
+          if (result.value.ok || result.value.errors.notFound) {
+            //Recupero el index de la observacion
+            let fishBatch = this.fishBatch;
+            console.log('Se emitío el evento para remover');
+            this.dispatch('biometry-was-deleted', { fishBatch, biometry });
+          } else {
+            console.log(res.value.errors);
+          }
+        }
+      });
+    },
     refresh() {
       this.observations = [];
       this.fishBatch.observations.forEach(item => {
@@ -192,6 +229,11 @@ window.fishBatchComponent = () => {
       this.deaths = [];
       this.fishBatch.deathReports.forEach(report => {
         this.deaths.push(report);
+      })
+
+      this.biometries = [];
+      this.fishBatch.biometries.forEach(item => {
+        this.biometries.push(item);
       })
     }
   }

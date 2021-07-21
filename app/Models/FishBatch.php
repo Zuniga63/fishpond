@@ -28,5 +28,10 @@ class FishBatch extends Model
     return $this->hasMany(FishBatchDeath::class, 'fish_batch_id');
   }
 
+  public function biometries()
+  {
+    return $this->hasMany(FishBatchBiometry::class, 'fish_batch_id');
+  }
+
   
 }

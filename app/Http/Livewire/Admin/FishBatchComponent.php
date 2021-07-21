@@ -3,6 +3,7 @@
 namespace App\Http\Livewire\Admin;
 
 use App\Models\FishBatch;
+use App\Models\FishBatchBiometry;
 use App\Models\FishBatchDeath;
 use App\Models\FishBatchExpense;
 use App\Models\FishBatchObservation;
@@ -111,6 +112,12 @@ class FishBatchComponent extends Component
       ->get(['id', 'deaths', 'created_at as createdAt', 'updated_at as updatedAt'])
       ->toArray();
 
+    //Recupero las biometrías
+    $biometries = $data->biometries()
+      ->orderBy('date')
+      ->get(['id', 'biometry_date as date', 'measurements', 'created_at as createdAt', 'updated_at as updatedAt'])
+      ->toArray();
+
     return [
       'id' => intval($data->id),
       'fishpondId' => intval($data->fishpond_id),
@@ -122,6 +129,7 @@ class FishBatchComponent extends Component
       'amount' => intval($data->amount),
       'observations' => $observations,
       'expenses' => $expenses,
+      'biometries' => $biometries,
       'deaths' => $deaths,
       'createdAt' => $data->created_at,
       'updatedAt' => $data->updated_at,
@@ -246,6 +254,37 @@ class FishBatchComponent extends Component
     'fishBatchId' => 'identificador del lote',
     'deaths' => 'numero de muertes',
     'deathId' => 'identificador de las muertes'
+  ];
+
+  protected function biometryRules(bool $inThisMoment = true, bool $setTime = false, bool $update = false)
+  {
+    $rules = [
+      'fishBatchId' => 'required|integer|min:1|exists:fish_batch,id',
+      'measurements' => 'required|array'
+    ];
+
+    if (!$inThisMoment) {
+      $rules['date'] = 'required|string|date|before_or_equal:' . Carbon::now()->format('Y-m-d');
+      if ($setTime) {
+        $rules['time'] = 'required|string|date_format:H:i';
+        $rules['fullDate'] = 'required|string|date_format:Y-m-d H:i';
+      }
+    }
+
+    if ($update) {
+      $rules['biometryId'] = 'required|integer|min:1|exists:fish_batch_biometry,id';
+    }
+
+    return $rules;
+  }
+
+  protected $biometryAttributes = [
+    'fishBatchId' => 'identificador del lote',
+    'biometryId' => 'identificador de la biometría',
+    'measurements' => 'mediciones',
+    'date' => 'fecha',
+    'time' => 'hora',
+    'fullDate' => 'fecha y hora',
   ];
 
   // *===============================================*
@@ -977,6 +1016,222 @@ class FishBatchComponent extends Component
 
           $ok = true;
           $this->alert('¡Reporte Eliminado!', 'success');
+        } else {
+          $this->alert('¡Eliminación Ilegal!', 'error');
+        }
+      } else {
+        $errors = ['notFound' => true];
+      }
+    } else {
+      $this->doesNotPermission('eliminar registros');
+    }
+
+    return [
+      'ok' => $ok,
+      'errors' => $errors
+    ];
+  }
+
+  public function storeBiometry($data)
+  {
+    $ok = false;
+    $errors = null;
+    $biometry = null;
+
+    //Se crean las variables temporales
+    $inThisMoment = true;
+    $setTime = true;
+
+    if (array_key_exists('inThisMoment', $data)) {
+      $inThisMoment = $data['inThisMoment'];
+      if (array_key_exists('setTime', $data)) {
+        $setTime = $data['setTime'];
+      }
+    }
+
+    //Se obtienen las reglas de validación
+    $rules = $this->biometryRules($inThisMoment, $setTime);
+    $attributes = $this->biometryAttributes;
+
+    if (userHasPermission('update_fish_batch')) {
+      try {
+        $inputs = Validator::make($data, $rules, [], $attributes)->validate();
+
+        //Se recupera el lote de peces
+        /** @var FishBatch */
+        $fishBatch = FishBatch::find($inputs['fishBatchId'], ['id', 'seedtime']);
+
+        //Se crea la instancia para la fecha
+        $fullDate = Carbon::now();
+        $seedtime = Carbon::createFromFormat('Y-m-d H:i:s', $fishBatch->seedtime);
+        $dateIsCorrect = true;
+
+        if (!$inThisMoment) {
+          if ($setTime) {
+            $fullDate = Carbon::createFromFormat('Y-m-d H:i', $inputs['fullDate']);
+          } else {
+            $fullDate = Carbon::createFromFormat('Y-m-d', $inputs['date'])->startOfDay();
+            $seedtimeStart = $seedtime->copy()->startOfDay();
+            $seedtimeEnd = $seedtime->copy()->endOfDay();
+
+            if ($fullDate->between($seedtimeStart, $seedtimeEnd)) {
+              $fullDate = $seedtime->copy()->addSecond();
+            }
+          }
+
+          if ($fullDate->lessThan($seedtime)) {
+            $dateIsCorrect = false;
+          }
+        }
+
+        if ($dateIsCorrect) {
+          //Se guarda la biometría
+          $biometry = $fishBatch->biometries()->create([
+            'biometry_date' => $fullDate->format('Y-m-d H:i:s'),
+            'measurements' => $inputs['measurements']
+          ]);
+
+          //Se muta el objeto de la biometría
+          $biometry = [
+            'id' => $biometry->id,
+            'date' => $biometry->biometry_date,
+            'measurements' => $biometry->measurements,
+            'createdAt' => $biometry->created_at,
+            'updatedAt' => $biometry->updated_at,
+          ];
+
+          $ok = true;
+          $this->alert('¡Biometría Almacenada!', 'success');
+        } else {
+          $errors = ['fullDate' => 'La fecha es anterior a la siembra del lote.'];
+        }
+      } catch (ValidationException $valExc) {
+        $errors = $valExc->errors();
+      } catch (\Throwable $th) {
+        $this->emitError($th);
+      }
+    } else {
+      $this->doesNotPermission('crear biometrías');
+    }
+
+    return [
+      'ok' => $ok,
+      'errors' => $errors,
+      'biometry' => $biometry
+    ];
+  }
+
+  public function updateBiometry($data)
+  {
+    $ok = false;
+    $errors = null;
+    $biometry = null;
+
+    //Se crean las variables temporales
+    $inThisMoment = true;
+    $setTime = true;
+
+    if (array_key_exists('inThisMoment', $data)) {
+      $inThisMoment = $data['inThisMoment'];
+      if (array_key_exists('setTime', $data)) {
+        $setTime = $data['setTime'];
+      }
+    }
+
+    //Se obtienen las reglas de validación
+    $rules = $this->biometryRules($inThisMoment, $setTime, true);
+    $attributes = $this->biometryAttributes;
+
+    if (userHasPermission('update_fish_batch')) {
+      try {
+        $inputs = Validator::make($data, $rules, [], $attributes)->validate();
+
+        //Se recupera el lote de peces
+        /** @var FishBatch */
+        $fishBatch = FishBatch::find($inputs['fishBatchId'], ['id', 'seedtime']);
+
+        //Se recupera la biometría
+        $biometry = FishBatchBiometry::find($inputs['biometryId']);
+
+        //Se crea la instancia para la fecha
+        $fullDate = Carbon::now();
+        $seedtime = Carbon::createFromFormat('Y-m-d H:i:s', $fishBatch->seedtime);
+        $dateIsCorrect = true;
+
+        if (!$inThisMoment) {
+          if ($setTime) {
+            $fullDate = Carbon::createFromFormat('Y-m-d H:i', $inputs['fullDate']);
+          } else {
+            $fullDate = Carbon::createFromFormat('Y-m-d', $inputs['date'])->startOfDay();
+            $seedtimeStart = $seedtime->copy()->startOfDay();
+            $seedtimeEnd = $seedtime->copy()->endOfDay();
+
+            if ($fullDate->between($seedtimeStart, $seedtimeEnd)) {
+              $fullDate = $seedtime->copy()->addSecond();
+            }
+          }
+
+          if ($fullDate->lessThan($seedtime)) {
+            $dateIsCorrect = false;
+          }
+        }
+
+        if ($dateIsCorrect) {
+          //Se actualiza la biometría
+          $biometry->biometry_date = $fullDate->format('Y-m-d H:i:s');
+          $biometry->measurements = $inputs['measurements'];
+          $biometry->save();
+
+          //Se muta el objeto de la biometría
+          $biometry = [
+            'id' => $biometry->id,
+            'date' => $biometry->biometry_date,
+            'measurements' => $biometry->measurements,
+            'createdAt' => $biometry->created_at,
+            'updatedAt' => $biometry->updated_at,
+          ];
+
+          $ok = true;
+          $this->alert('¡Biometría Actalizada!', 'success');
+        } else {
+          $errors = ['fullDate' => 'La fecha es anterior a la siembra del lote.'];
+        }
+      } catch (ValidationException $valExc) {
+        $errors = $valExc->errors();
+      } catch (\Throwable $th) {
+        $this->emitError($th);
+      }
+    } else {
+      $this->doesNotPermission('crear biometrías');
+    }
+
+    return [
+      'ok' => $ok,
+      'errors' => $errors,
+      'biometry' => $biometry
+    ];
+  }
+
+  public function destroyBiometry(int $biometryId)
+  {
+    $ok = false;
+    $errors = null;
+    $userId = session()->get('userId');
+
+    if (userHasPermission('update_fish_batch')) {
+      //Se recupera la biometría
+      /** @var FishBatchBiometry */
+      $biometry = FishBatchBiometry::find($biometryId, ['id', 'fish_batch_id']);
+      //Recupero el lote de peces
+
+      if ($biometry) {
+
+        // $fishBatch = FishBatch::find($report->fish_batch_id, ['id', 'population', 'user_id']);
+        if ($biometry->fishBatch->user_id === $userId) {
+          $biometry->delete();
+
+          $ok = true;
+          $this->alert('¡Biometría Eliminada!', 'success');
         } else {
           $this->alert('¡Eliminación Ilegal!', 'error');
         }
