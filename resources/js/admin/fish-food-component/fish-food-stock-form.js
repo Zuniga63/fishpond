@@ -1,6 +1,6 @@
 import input from '../input';
 
-window.fishFoodForm = () => {
+window.fishFoodStockForm = () => {
   return {
     /** Define si el formulario se muestra o no */
     visible: false,
