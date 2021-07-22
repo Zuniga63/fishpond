@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Livewire\Admin\FishBatchComponent;
+use App\Http\Livewire\Admin\FishFoodComponent;
 use App\Http\Livewire\Admin\FishpondComponent;
 use App\Http\Livewire\Admin\MenuComponent;
 use App\Http\Livewire\Admin\PermissionComponent;
@@ -45,6 +46,7 @@ Route::middleware(['auth:sanctum', 'verified', 'adminPanel'])
     Route::view('/', 'layouts.admin.layout')->name('dashboard');
     Route::get('/estanques', FishpondComponent::class)->name('fishpond');
     Route::get('/lotes', FishBatchComponent::class)->name('fish_batch');
+    Route::get('/alimentos', FishFoodComponent::class)->name('fish_food');
 
     /**
      ******************************************

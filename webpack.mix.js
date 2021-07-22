@@ -34,7 +34,8 @@ mix.js('resources/js/app.js', 'public/js')
 
   //Codigo para el componente del estanque
   .js('resources/js/admin/fishpond-component/app.js', 'public/js/admin/fishpond-component/app.js').sourceMaps()
-  .js('resources/js/admin/fish-batch-component/app.js', 'public/js/admin/fish-batch-component/app.js').sourceMaps();
+  .js('resources/js/admin/fish-batch-component/app.js', 'public/js/admin/fish-batch-component/app.js').sourceMaps()
+  .js('resources/js/admin/fish-food-component/app.js', 'public/js/admin/fish-food-component/app.js').sourceMaps();
 
 if (mix.inProduction()) {
   mix.version();
