@@ -207,7 +207,6 @@ window.fishBatchComponent = () => {
           if (result.value.ok || result.value.errors.notFound) {
             //Recupero el index de la observacion
             let fishBatch = this.fishBatch;
-            console.log('Se emitío el evento para remover');
             this.dispatch('biometry-was-deleted', { fishBatch, biometry });
           } else {
             console.log(res.value.errors);

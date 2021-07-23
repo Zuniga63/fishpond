@@ -363,7 +363,6 @@ window.app = () => {
      * @param {*} data Objetos con los datos de un lote de peces
      */
     addNewFishBatch(data) {
-      console.log(data);
       //Se crea la instancia
       let fishBatch = this.createFishBatch(data);
       //Se agrega al arreglo principal
