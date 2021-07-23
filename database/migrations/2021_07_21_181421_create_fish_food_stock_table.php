@@ -16,7 +16,7 @@ class CreateFishFoodStockTable extends Migration
     Schema::create('fish_food_stock', function (Blueprint $table) {
       $table->id();
       $table->foreignId('fish_food_id')->constrained('fish_food');
-      $table->unsignedMediumInteger('quantity');                    //{0-16777215}
+      $table->unsignedMediumInteger('initial_stock');               //{0-16777215}
       $table->unsignedMediumInteger('stock');                       //{0-16777215}
       $table->decimal('amount', 10, 2);                             //{0-99'999'999.99}
       $table->timestamps();

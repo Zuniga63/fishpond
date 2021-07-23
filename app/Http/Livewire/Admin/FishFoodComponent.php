@@ -2,6 +2,7 @@
 
 namespace App\Http\Livewire\Admin;
 
+use App\Models\FishFood;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
@@ -10,7 +11,8 @@ class FishFoodComponent extends Component
 {
   public function render()
   {
-    return view('livewire.admin.fish-food-component')
+    $initialData = $this->getInitialData();
+    return view('livewire.admin.fish-food-component', compact('initialData'))
       ->layout('layouts.admin-layout', $this->layoutData);
   }
 
@@ -33,9 +35,67 @@ class FishFoodComponent extends Component
     return $data;
   }
 
-  public function getFishFoodList()
+  protected function getInitialData()
   {
-    //TODO
+    $fishFoods = $this->getFishFoodList();
+    $stages = [
+      'initiation' => 'Inicio',
+      'growth' => 'Levante',
+      'grow-fat' => 'Engorde',
+      'ending' => 'Finalización'
+    ];
+
+    return [
+      'fishFoodList' => $fishFoods,
+      'stages' => $stages
+    ];
+  }
+
+  protected function getFishFoodList()
+  {
+    $list = [];
+    $userId = session()->get('userId');
+    /** @var FishFood */
+    $fishFoods = FishFood::orderBy('name')
+      ->where('user_id', $userId)
+      ->with(['stocks' => function ($query) {
+        $query->where('stock', '>', 0);
+      }])
+      ->get();
+
+    foreach ($fishFoods as $record) {
+      $fishFood = $this->createFishFood($record);
+      $list[] = $fishFood;
+    }
+
+    return $list;
+  }
+
+  protected function createFishFood($data)
+  {
+    $stocks = [];
+    foreach ($data->stocks as $stock) {
+      $stocks[] = [
+        'id' => $stock->id,
+        'initialStock' => $stock->initial_stock,
+        'stock' => $stock->stock,
+        'amount' => intval($stock->amount),
+        'createdAt' => $stock->created_at,
+        'updatedAt' => $stock->updated_at
+      ];
+    }
+
+    $fishFood = [
+      'id' => $data->id,
+      'name' => $data->name,
+      'brand' => $data->brand,
+      'stage' => $data->stage,
+      'stocks' => $stocks,
+      'createdAt' => $data->created_at,
+      'updatedAt' => $data->updated_at,
+    ];
+
+    return $fishFood;
   }
 
   // *==========================================================*

@@ -9,7 +9,7 @@ class FishFoodStock extends Model
 {
   use HasFactory;
   protected $table = 'fish_food_stock';
-  protected $fillable = ['fish_food_id', 'quantity', 'stock', 'amount'];
+  protected $fillable = ['fish_food_id', 'initial_stock', 'stock', 'amount'];
   protected $guarded = ['id'];
 
   public function fishFood()
