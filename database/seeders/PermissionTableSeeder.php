@@ -69,6 +69,16 @@ class PermissionTableSeeder extends Seeder
       ["name" => "Crear Lote de Peces", "action" => "create_fish_batch", "order" => 29],
       ["name" => "Actualizar Lote de Peces", "action" => "update_fish_batch", "order" => 30],
       ["name" => "Eliminar Lote de Peces", "action" => "delete_fish_batch", "order" => 31],
+
+      /**
+       * PERMISOS PARA ADMINSITRAR ALIMENTOS
+       */
+      ["name" => "Crear Nuevo Alimento", "action" => "create_fish_food", "order" => 32],
+      ["name" => "Actualizar Alimento", "action" => "update_fish_food", "order" => 33],
+      ["name" => "Eliminar Alimento", "action" => "delete_fish_food", "order" => 34],
+      ["name" => "Ingresar Stock", "action" => "create_fish_food_stock", "order" => 35],
+      ["name" => "Actualizar Stock", "action" => "update_fish_food_stock", "order" => 36],
+      ["name" => "Eliminar Stock", "action" => "delete_fish_food_stock", "order" => 37],
     ];
 
     foreach ($permissions as $data) {
