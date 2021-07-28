@@ -16,4 +16,9 @@ class FishFoodStock extends Model
   {
     $this->belongsTo(FishFood::class);
   }
+
+  public function rations()
+  {
+    return $this->hasMany(FishFoodRation::class, 'fish_food_stock_id');
+  }
 }

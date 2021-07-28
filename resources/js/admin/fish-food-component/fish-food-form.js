@@ -1,3 +1,4 @@
+import { isEmpty } from 'lodash';
 import input from '../input';
 
 window.fishFoodForm = () => {
@@ -17,7 +18,11 @@ window.fishFoodForm = () => {
     // *===========================================*
     // *========== Campos del formulario ==========*
     // *===========================================*
-    //TODO
+    fishFood: null,
+    name: null,
+    brand: null,
+    stages: null,
+    stage: null,
     // *====================================================*
     // *========== Relacionadas con el componente ==========*
     // *====================================================*
@@ -36,26 +41,34 @@ window.fishFoodForm = () => {
       this.wire = wire;
       this.dispatch = dispatch;
       this.refs = refs;
+      this.stages = window.initialData.stages;
       this.__createInputs();
     },
     __createInputs() {
-      //FECHA
-      this.date = input({
-        id: 'biometryDate',
-        name: 'date',
-        label: 'Selecciona una fecha',
-        required: true,
-        max: dayjs(),
-        min: dayjs(),
+      //NOMBRE
+      this.name = input({
+        id: 'fishFoodName',
+        name: 'name',
+        label: 'Nombre',
+        placeholder: 'Escribe el nombre aquí.',
+        min: 3,
+        max: 50,
       });
-
-      //HORA
-      this.time = input({
-        id: 'biometryTime',
-        name: 'time',
-        label: 'Hora',
-        required: true,
-        value: dayjs().format('HH:mm')
+      //MARCA
+      this.brand = input({
+        id: 'fishFoodBrand',
+        name: 'brand',
+        label: 'Marca',
+        placeholder: 'Escribe la marca aquí.',
+        min: 3,
+        max: 50,
+      });
+      //STAGE
+      this.stage = input({
+        id: 'fishFoodStage',
+        name: 'stage',
+        label: 'Etapa',
+        placeholder: 'Selecciona una etapa',
       });
     },
     // *=====================================================*
@@ -65,6 +78,12 @@ window.fishFoodForm = () => {
       this.visible = false;
       this.mode = "register";
       this.waiting = false;
+
+      //Se resetean los campos
+      this.fishFood = null;
+      this.name.reset();
+      this.brand.reset();
+      this.stage.reset();
     },
     /**
      * Este metodo establece los parametros basicos con lo que
@@ -76,7 +95,10 @@ window.fishFoodForm = () => {
       this.mode = detail.mode;
 
       if (detail.mode === 'updating') {
-        //TODO
+        this.fishFood = detail.fishFood;
+        this.name.value = detail.fishFood.name;
+        this.brand.value = detail.fishFood.brand;
+        this.stage.value = detail.fishFood.stage;
       }
     },
     cancel() {
@@ -98,7 +120,7 @@ window.fishFoodForm = () => {
     // *================ FETCH ================*
     // *=======================================*
     submit() {
-      if (this.validateSubmit()) {
+      if (this.validateSubmit() && !this.waiting) {
         if (this.mode === 'register') {
           this.__store();
         } else if (this.mode === 'updating') {
@@ -109,81 +131,123 @@ window.fishFoodForm = () => {
     __store() {
       this.waiting = true;
       let data = this.getSubmitData();
-      //TODO
+      this.wire.storeFishFood(data)
+        .then(res => {
+          if (res.ok) {
+            this.dispatch('fish-food-was-stored', res.fishFood);
+            setTimeout(() => {
+              this.reset();
+            }, 200);
+          } else {
+            this.notifyErrors(res.errors);
+            console.log(res.errors);
+          }
+        }).catch(error => {
+          console.log(error);
+        }).finally(() => {
+          this.waiting = false;
+        })
     },
     __update() {
       this.waiting = true;
       let data = this.getSubmitData();
+      this.wire.updateFishFood(data)
+        .then(res => {
+          if (res.ok) {
+            this.dispatch('fish-food-was-updated', res.fishFood);
+            setTimeout(() => {
+              this.reset();
+            }, 200);
+          } else {
+            this.notifyErrors(res.errors);
+            console.log(res.errors);
+          }
+        }).catch(error => {
+          console.log(error);
+        }).finally(() => {
+          this.waiting = false;
+        })
       //TODO
     },
     getSubmitData() {
-      //TODO
+      let data = {
+        name: this.name.value.trim(),
+        brand: this.brand.value.trim(),
+        stage: this.stage.value
+      };
+
+      if (this.mode === 'updating') {
+        data.fishFoodId = this.fishFood.id;
+      }
+
+      return data;
     },
     // *===============================================*
     // *================ VALIDACIONES =================*
     // *===============================================*
-    validateDate() {
-      let value = this.date.value;
-      let min = dayjs(this.date.min).startOf('day');
-      let max = dayjs();
-      let errorMessage = null;
+    validateName() {
+      let value = typeof this.name.value === 'string'
+        ? this.name.value.trim()
+        : this.name.value;
+      let error = null;
 
-      if (!this.inThisMoment) {
-        if (!isEmpty(value)) {
-          let date = dayjs(value, 'YYYY-MM-DD').startOf('day');
-          if (date.isSameOrAfter(min)) {
-            if (date.isSameOrBefore(max)) {
-              this.date.isOk();
-              //Se valida la hora
-              if (this.setTime) {
-                this.validateTime();
-              }
-
-              return true;
-            } else {
-              errorMessage = "No se pueden agregar gastos en el futuro.";
-            }
+      if (!isEmpty(value)) {
+        if (value.length >= this.name.min) {
+          if (value.length <= this.name.max) {
+            this.name.isOk();
+            return true;
           } else {
-            errorMessage = "La fecha debe ser mayor a la fecha del lote";
+            error = `Debe tener máximo ${this.name.max} caracteres.`;
           }
         } else {
-          errorMessage = "Se debe elegir una fecha valida";
+          error = `Debe tener minimo ${this.name.min} caracteres.`
         }
       } else {
-        return true;
+        error = 'Este campo es obligatorio.'
       }
 
-      this.date.setError(errorMessage);
+      this.name.setError(error);
       return false;
     },
-    validateTime() {
-      let time = this.time.value;
-      let date = this.date.value;
-      let min = dayjs(this.fishBatch.seedtime);
-      let max = dayjs();
-      let errorMessage = null;
+    validateBrand() {
+      let value = typeof this.brand.value === 'string'
+        ? this.brand.value.trim()
+        : this.brand.value;
+      let error = null;
 
-      if (!this.inThisMoment && this.setTime && !this.date.hasError) {
-        if (!isEmpty(time)) {
-          let fullDate = dayjs(`${date} ${time}`, 'YYYY-MM-DD HH:mm');
-          if (fullDate.isSameOrAfter(min)) {
-            if (fullDate.isSameOrBefore(max)) {
-              this.time.isOk();
-              return true;
-            } else {
-              errorMessage = "Los gastos no se pueden realizar en el futuro";
-            }
+      if (!isEmpty(value)) {
+        if (value.length >= this.brand.min) {
+          if (value.length <= this.brand.max) {
+            this.brand.isOk();
+            return true;
           } else {
-            errorMessage = "Se intenta registrar un gasto anterior al lote.";
+            error = `Debe tener máximo ${this.brand.max} caracteres.`;
           }
         } else {
-          errorMessage = "Debe escribir o seleccionar una hora válida";
+          error = `Debe tener minimo ${this.brand.min} caracteres.`
         }
       } else {
-        return true;
+        error = 'Este campo es obligatorio.'
       }
 
-      this.time.setError(errorMessage);
+      this.brand.setError(error);
+      return false;
+    },
+    validateStage() {
+      let value = this.stage.value;
+      let error = null;
+      if (value) {
+        if (Object.hasOwnProperty.call(this.stages, value)) {
+          this.stage.isOk();
+          return true;
+        } else {
+          error = 'Esta opción no existe';
+        }
+      } else {
+        error = 'Se debe seleccionar una etapa';
+      }
+
+      this.stage.setError(error);
       return false;
     },
     /**
@@ -193,8 +257,9 @@ window.fishFoodForm = () => {
      */
     validateSubmit() {
       let validations = [];
-      validations.push(this.validateDate());
-      validations.push(this.validateTime());
+      validations.push(this.validateName());
+      validations.push(this.validateBrand());
+      validations.push(this.validateStage());
 
       //Retorna false si alguna de las validaciones es falsa, pero valida todos los campos
       return !validations.some(val => val === false);

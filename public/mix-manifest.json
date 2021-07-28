@@ -1,11 +1,12 @@
 {
-    "/js/app.js": "/js/app.js?id=4ee993ae80185546569a",
+    "/js/app.js": "/js/app.js?id=d5b2a60a92ef0f6d7973",
     "/js/admin/main.js": "/js/admin/main.js?id=ef2d314558ae558175ca",
-    "/js/admin/fishpond-component/app.js": "/js/admin/fishpond-component/app.js?id=f1d7a1f1b8e304012e62",
-    "/js/admin/fish-batch-component/app.js": "/js/admin/fish-batch-component/app.js?id=0289b27468e5a4d94ff9",
-    "/css/admin/main.css": "/css/admin/main.css?id=e050d1164458d4ed03ed",
-    "/css/fontawesome-free/all.css": "/css/fontawesome-free/all.css?id=778395c8667a627acaee",
-    "/css/app.css": "/css/app.css?id=64dcd776ab205293c1bd",
+    "/js/admin/fishpond-component/app.js": "/js/admin/fishpond-component/app.js?id=1904e64ce288f407fc50",
+    "/js/admin/fish-batch-component/app.js": "/js/admin/fish-batch-component/app.js?id=be5d17d69554184831e6",
+    "/js/admin/fish-food-component/app.js": "/js/admin/fish-food-component/app.js?id=abc1ea19d129bff440ab",
+    "/css/admin/main.css": "/css/admin/main.css?id=f2109760774d90880c73",
+    "/css/fontawesome-free/all.css": "/css/fontawesome-free/all.css?id=da62a30abcfcdce27cab",
+    "/css/app.css": "/css/app.css?id=8ea1603f31463efcca62",
     "/css/admin/jquery.nestable.css": "/css/admin/jquery.nestable.css?id=db9d9ee94ddeedd0b873",
     "/js/admin/all.js": "/js/admin/all.js?id=5af598facee7f0037ee9",
     "/js/admin/jquery.nestable.js": "/js/admin/jquery.nestable.js?id=68230d95f020b577d157"

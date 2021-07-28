@@ -3,6 +3,7 @@
 namespace App\Http\Livewire\Admin;
 
 use App\Models\FishFood;
+use App\Models\FishFoodStock;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
@@ -56,10 +57,11 @@ class FishFoodComponent extends Component
     $list = [];
     $userId = session()->get('userId');
     /** @var FishFood */
-    $fishFoods = FishFood::orderBy('name')
+    $fishFoods = FishFood::orderBy('stage')
+      ->orderBy('name')
       ->where('user_id', $userId)
       ->with(['stocks' => function ($query) {
-        $query->where('stock', '>', 0);
+        $query->orderBy('created_at')->where('stock', '>', 0);
       }])
       ->get();
 
@@ -75,14 +77,7 @@ class FishFoodComponent extends Component
   {
     $stocks = [];
     foreach ($data->stocks as $stock) {
-      $stocks[] = [
-        'id' => $stock->id,
-        'initialStock' => $stock->initial_stock,
-        'stock' => $stock->stock,
-        'amount' => intval($stock->amount),
-        'createdAt' => $stock->created_at,
-        'updatedAt' => $stock->updated_at
-      ];
+      $stocks[] = $this->createStock($stock);
     }
 
     $fishFood = [
@@ -98,22 +93,59 @@ class FishFoodComponent extends Component
     return $fishFood;
   }
 
+  protected function createStock($stock)
+  {
+    return [
+      'id' => $stock->id,
+      'initialStock' => $stock->initial_stock,
+      'stock' => $stock->stock,
+      'amount' => intval($stock->amount),
+      'createdAt' => $stock->created_at,
+      'updatedAt' => $stock->updated_at
+    ];
+  }
+
   // *==========================================================*
   // *================= REGLAS Y VALIDACIONES ==================*
   // *==========================================================*
   protected function fishFoodRules(bool $update = false)
   {
-    //TODO
+    $rules = [
+      'userId' => 'required|integer|exists:user,id',
+      'name' => 'required|string|min:3|max:50',
+      'brand' => 'required|string|min:3|max:50',
+      'stage' => 'required|in:initiation,growth,grow-fat,ending'
+    ];
+
+    if ($update) {
+      $rules['fishFoodId'] = 'required|integer|exists:fish_food,id';
+    }
+
+    return $rules;
   }
 
-  protected $fishFoddAttributes = [];
+  protected $fishFoddAttributes = [
+    'userId' => 'usuario',
+    'name' => 'nombre',
+    'brand' => 'marca',
+    'stage' => 'etapa',
+    'fishFoodId' => 'alimento'
+  ];
 
-  protected function fishFoodStockRules(bool $inThisMoment, bool $setTime, bool $update = false)
+  protected function fishFoodStockRules(bool $update = false)
   {
-    //TODO
+    return [
+      'fishFoodId' => 'required|integer|exists:fish_food,id',
+      'quantity' => 'required|numeric|between:1,16700.00',
+      'amount' => 'required|numeric|between:0.01,99999999.99',
+    ];
   }
 
-  protected $fishFoodStockAttributes = [];
+  protected $fishFoodStockAttributes = [
+    'fishFoodId' => 'alimento',
+    'quantity' => 'cantidad',
+    'amount' => 'importe'
+  ];
 
   // *===============================================*
   // *==================== CRUD =====================*
@@ -122,15 +154,29 @@ class FishFoodComponent extends Component
   {
     $ok = false;
     $errors = null;
+    $fishFood = null;
     $permissionKey = 'create_fish_food';
     $permissionInfo = 'agregar alimento';
 
-    $rules = null;
-    $attributes = null;
+    $rules = $this->fishFoodRules();
+    $attributes = $this->fishFoddAttributes;
+
+    $userId = session()->get('userId');
+    $data['userId'] = $userId;
 
     if (userHasPermission($permissionKey)) {
       try {
         $inputs = Validator::make($data, $rules, [], $attributes)->validate();
+        $fishFood = FishFood::create([
+          'user_id' => $userId,
+          'name' => $inputs['name'],
+          'brand' => $inputs['brand'],
+          'stage' => $inputs['stage']
+        ]);
+
+        $ok = true;
+        $fishFood = $this->createFishFood($fishFood);
+        $this->alert('El alimento fue guardado con éxito.', 'success');
         //TODO
       } catch (ValidationException $valExc) {
         $errors = $valExc->errors();
@@ -144,7 +190,8 @@ class FishFoodComponent extends Component
 
     return [
       'ok' => $ok,
-      'errors' => $errors
+      'errors' => $errors,
+      'fishFood' => $fishFood
     ];
   }
 
@@ -152,15 +199,31 @@ class FishFoodComponent extends Component
   {
     $ok = false;
     $errors = null;
-    $permissionKey = 'create_fish_food';
-    $permissionInfo = 'agregar alimento';
+    $fishFood = null;
+    $permissionKey = 'update_fish_food';
+    $permissionInfo = 'actualizar alimento';
 
-    $rules = null;
-    $attributes = null;
+    $rules = $this->fishFoodRules(true);
+    $attributes = $this->fishFoddAttributes;
+
+    $userId = session()->get('userId');
+    $data['userId'] = $userId;
 
     if (userHasPermission($permissionKey)) {
       try {
         $inputs = Validator::make($data, $rules, [], $attributes)->validate();
+
+        //Se recupera la instancia
+        $fishFood = FishFood::find($inputs['fishFoodId']);
+        //Se actualiza
+        $fishFood->name = $inputs['name'];
+        $fishFood->brand = $inputs['brand'];
+        $fishFood->stage = $inputs['stage'];
+        $fishFood->save();
+
+        $ok = true;
+        $this->alert('Información Actualizada', 'success');
+        $fishFood = $this->createFishFood($fishFood);
         //TODO
       } catch (ValidationException $valExc) {
         $errors = $valExc->errors();
@@ -174,7 +237,8 @@ class FishFoodComponent extends Component
 
     return [
       'ok' => $ok,
-      'errors' => $errors
+      'errors' => $errors,
+      'fishFood' => $fishFood
     ];
   }
 
@@ -182,18 +246,33 @@ class FishFoodComponent extends Component
   {
     $ok = false;
     $errors = null;
-    $permissionKey = 'create_fish_food';
-    $permissionInfo = 'agregar alimento';
+    $permissionKey = 'delete_fish_food';
+    $permissionInfo = 'eliminar alimento';
 
-    $rules = null;
-    $attributes = null;
 
     if (userHasPermission($permissionKey)) {
       try {
-        // $inputs = Validator::make($data, $rules, [], $attributes)->validate();
-        //TODO
-      } catch (ValidationException $valExc) {
-        $errors = $valExc->errors();
+        //Se recupera la instancia
+        /** @var FishFood */
+        $fishFood = FishFood::find($fishFoodId, ['id', 'name']);
+
+        if ($fishFood) {
+          //Se verifica si no se estan usando los recursos con este alimento
+          $stocks = $fishFood->stocks()->count();
+
+          //Se conprueba si este alimento tiene raciones
+          $rations = $fishFood->rations()->count();
+          if ($stocks > 0 || $rations > 0) {
+            $this->alert('¡No se puede Eliminar!', 'error', 'Este recurso está siendo utilizado.');
+          } else {
+            $fishFood->delete();
+            $ok = true;
+            $this->alert('¡Alimento Eliminado!', 'success');
+          }
+        } else {
+          $this->alert('Alimento no encontrado', 'error');
+          $ok = true;
+        }
       } catch (\Throwable $th) {
         $this->emitError($th);
       }
@@ -212,16 +291,28 @@ class FishFoodComponent extends Component
   {
     $ok = false;
     $errors = null;
-    $permissionKey = 'create_fish_food';
-    $permissionInfo = 'agregar alimento';
+    $stock = null;
+    $permissionKey = 'create_fish_food_stock';
+    $permissionInfo = 'agregar stock';
 
-    $rules = null;
-    $attributes = null;
+    $rules = $this->fishFoodStockRules();
+    $attributes = $this->fishFoodStockAttributes;
 
     if (userHasPermission($permissionKey)) {
       try {
         $inputs = Validator::make($data, $rules, [], $attributes)->validate();
-        //TODO
+        /** @var FishFood */
+        $fishFood = FishFood::find($inputs['fishFoodId'], ['id']);
+        $quantity = $inputs['quantity'] * 1000;
+        $stock = $fishFood->stocks()->create([
+          'initial_stock' => $quantity,
+          'stock' => $quantity,
+          'amount' => $inputs['amount'],
+        ]);
+
+        $stock = $this->createStock($stock);
+        $ok = true;
+        $this->alert('Stock Guardado', 'success');
       } catch (ValidationException $valExc) {
         $errors = $valExc->errors();
       } catch (\Throwable $th) {
@@ -234,7 +325,8 @@ class FishFoodComponent extends Component
 
     return [
       'ok' => $ok,
-      'errors' => $errors
+      'errors' => $errors,
+      'stock' => $stock
     ];
   }
 
@@ -272,16 +364,29 @@ class FishFoodComponent extends Component
   {
     $ok = false;
     $errors = null;
-    $permissionKey = 'create_fish_food';
-    $permissionInfo = 'agregar alimento';
-
-    $rules = null;
-    $attributes = null;
+    $permissionKey = 'delete_fish_food_stock';
+    $permissionInfo = 'eliminar stock';
 
     if (userHasPermission($permissionKey)) {
       try {
-        // $inputs = Validator::make($data, $rules, [], $attributes)->validate();
-        //TODO
+        //Recupero el stock
+        /** @var FishFoodStock */
+        $stock = FishFoodStock::find($stockId);
+
+        if($stock){
+          //Se verifica que no esté siendo usado en ninguna ración
+          $rations = $stock->rations()->count();
+          if($rations > 0){
+            $this->alert('¡No se puede Eliminar!', 'error', 'Inventario está siendo usado por alguna ración.');
+          }else{
+            $stock->delete();
+            $ok = true;
+            $this->alert('¡Inventario Eliminado!', 'success');
+          }
+        }else{
+          $this->alert('Inventario no encontrado', 'error');
+          $ok = true;
+        }
       } catch (ValidationException $valExc) {
         $errors = $valExc->errors();
       } catch (\Throwable $th) {

@@ -17,7 +17,10 @@ window.fishFoodStockForm = () => {
     // *===========================================*
     // *========== Campos del formulario ==========*
     // *===========================================*
-    //TODO
+    fishFoodList: [],
+    fishFoodId: null,
+    quantity: null,
+    amount: null,
     // *====================================================*
     // *========== Relacionadas con el componente ==========*
     // *====================================================*
@@ -37,25 +40,46 @@ window.fishFoodStockForm = () => {
       this.dispatch = dispatch;
       this.refs = refs;
       this.__createInputs();
+
+      //Se crea el listado de alimentos
+      window.initialData.fishFoodList.forEach(item => {
+        this.fishFoodList.push({
+          id: item.id,
+          name: item.name
+        });
+      });
     },
     __createInputs() {
-      //FECHA
-      this.date = input({
-        id: 'biometryDate',
-        name: 'date',
-        label: 'Selecciona una fecha',
-        required: true,
-        max: dayjs(),
-        min: dayjs(),
+      // CANTIDAD DEL STOCK A INGRESAR
+      this.quantity = input({
+        id: 'stockQuantity',
+        name: 'quantity',
+        label: 'Cantidad [Kg]',
+        placeholder: 'Escribe los Kg a ingresar.',
+        require: true,
+        min: 1,
+        max: 16700,
+        step: 0.001
       });
 
-      //HORA
-      this.time = input({
-        id: 'biometryTime',
-        name: 'time',
-        label: 'Hora',
-        required: true,
-        value: dayjs().format('HH:mm')
+      this.fishFoodId = input({
+        id: 'stockFishFoodId',
+        name: 'fishFoodId',
+        label: 'Alimento',
+        placeholder: 'Selecciona el alimento a ingresar.',
+        require: true,
+        min: 1,
+      });
+
+      //IMPORTE
+      this.amount = input({
+        id: 'expenseAmount',
+        name: 'amount',
+        label: 'Importe',
+        placeholder: '$0 [COP]',
+        require: true,
+        min: 100,
+        max: 100000000
       });
     },
     // *=====================================================*
@@ -65,6 +89,10 @@ window.fishFoodStockForm = () => {
       this.visible = false;
       this.mode = "register";
       this.waiting = false;
+
+      this.quantity.reset();
+      this.amount.reset();
+      this.fishFoodId.reset();
     },
     /**
      * Este metodo establece los parametros basicos con lo que
@@ -74,10 +102,11 @@ window.fishFoodStockForm = () => {
     enableForm(detail) {
       this.visible = true;
       this.mode = detail.mode;
+      this.fishFoodId.value = detail.fishFoodId;
 
-      if (detail.mode === 'updating') {
-        //TODO
-      }
+      // if (detail.mode === 'updating') {
+      //   //TODO
+      // }
     },
     cancel() {
       this.reset();
@@ -94,11 +123,41 @@ window.fishFoodStockForm = () => {
         }
       }
     },
+    formatAmount() {
+      //Recupero el valor
+      let value = window.deleteCurrencyFormat(this.refs.amount.value);
+      this.amount.value = value;
+      //Se vuelve a formatear
+      this.refs.amount.value = window.formatCurrency(value, 0);
+    },
+    /**
+     * Carga en el listado los alimentos que son creados por
+     * un formulario.
+     * @param {*} data datos de una instancia de alimento
+     */
+    addFishFood(data){
+      //Se crea la instancia
+      this.fishFoodList.push({
+        id: data.id,
+        name: data.name
+      })
+    },
+    /**
+     * Se encarga de actualizar el nombre de un alimento actualizado
+     * por otro componente.
+     * @param {*} data Datos de una instancia de alimento
+     */
+    updateFishFood(data){
+      //Se recupera la original
+      let original = this.fishFoodList.find(item => item.id === data.id);
+      //Se actualiza
+      original.name = data.name;
+    },
     // *=======================================*
     // *================ FETCH ================*
     // *=======================================*
     submit() {
-      if (this.validateSubmit()) {
+      if (this.validateSubmit() && !this.waiting) {
         if (this.mode === 'register') {
           this.__store();
         } else if (this.mode === 'updating') {
@@ -109,7 +168,25 @@ window.fishFoodStockForm = () => {
     __store() {
       this.waiting = true;
       let data = this.getSubmitData();
-      //TODO
+      this.wire.storeFishFoodStock(data)
+        .then(res => {
+          if (res.ok) {
+            this.dispatch('stock-was-stored', {
+              fishFoodId: data.fishFoodId,
+              stock: res.stock
+            });
+            setTimeout(() => {
+              this.reset();
+            }, 200);
+          } else {
+            this.notifyErrors(res.errors);
+            console.log(res.errors);
+          }
+        }).catch(error => {
+          console.log(error);
+        }).finally(() => {
+          this.waiting = false;
+        })
     },
     __update() {
       this.waiting = true;
@@ -117,73 +194,79 @@ window.fishFoodStockForm = () => {
       //TODO
     },
     getSubmitData() {
-      //TODO
+      let data = {
+        fishFoodId: this.fishFoodId.value,
+        quantity: this.quantity.value,
+        amount: this.amount.value
+      }
+
+      return data;
     },
     // *===============================================*
     // *================ VALIDACIONES =================*
     // *===============================================*
-    validateDate() {
-      let value = this.date.value;
-      let min = dayjs(this.date.min).startOf('day');
-      let max = dayjs();
+    validateAmount() {
+      let value = this.amount.value;
+      let min = this.amount.min;
+      let max = this.amount.max;
       let errorMessage = null;
 
-      if (!this.inThisMoment) {
-        if (!isEmpty(value)) {
-          let date = dayjs(value, 'YYYY-MM-DD').startOf('day');
-          if (date.isSameOrAfter(min)) {
-            if (date.isSameOrBefore(max)) {
-              this.date.isOk();
-              //Se valida la hora
-              if (this.setTime) {
-                this.validateTime();
-              }
-
-              return true;
-            } else {
-              errorMessage = "No se pueden agregar gastos en el futuro.";
-            }
+      if (value) {
+        if (value >= min) {
+          if (value < max) {
+            this.amount.isOk();
+            return true;
           } else {
-            errorMessage = "La fecha debe ser mayor a la fecha del lote";
+            errorMessage = `El importe debe ser menor que ` + window.formatCurrency(max, 0);
           }
         } else {
-          errorMessage = "Se debe elegir una fecha valida";
+          errorMessage = "El importe minimo debe ser de " + window.formatCurrency(min, 0);
         }
       } else {
-        return true;
+        errorMessage = "Este campo es obligatorio."
       }
 
-      this.date.setError(errorMessage);
+      this.amount.setError(errorMessage);
       return false;
     },
-    validateTime() {
-      let time = this.time.value;
-      let date = this.date.value;
-      let min = dayjs(this.fishBatch.seedtime);
-      let max = dayjs();
-      let errorMessage = null;
+    validateQuantity() {
+      let value = this.quantity.value;
+      let error = null;
 
-      if (!this.inThisMoment && this.setTime && !this.date.hasError) {
-        if (!isEmpty(time)) {
-          let fullDate = dayjs(`${date} ${time}`, 'YYYY-MM-DD HH:mm');
-          if (fullDate.isSameOrAfter(min)) {
-            if (fullDate.isSameOrBefore(max)) {
-              this.time.isOk();
-              return true;
-            } else {
-              errorMessage = "Los gastos no se pueden realizar en el futuro";
-            }
+      if (value) {
+        if (value >= this.quantity.min) {
+          if (value < this.quantity.max) {
+            this.quantity.isOk();
+            return true;
           } else {
-            errorMessage = "Se intenta registrar un gasto anterior al lote.";
+            error = `Debe ser menor que ${window.formatCurrency(this.quantity.max, 0, 'decimal')} Kg.`
           }
         } else {
-          errorMessage = "Debe escribir o seleccionar una hora válida";
+          error = `Debe ser minimo de ${window.formatCurrency(this.quantity.min, 0, 'decimal')} Kg.`
         }
       } else {
-        return true;
+        error = 'Este campo es requerido';
       }
 
-      this.time.setError(errorMessage);
+      this.quantity.setError(error);
+      return false;
+    },
+    validateFishFoodId(){
+      let value = this.fishFoodId.value;
+      let error = null;
+
+      if(value){
+        if(this.fishFoodList.some(item => item.id === value)){
+          this.fishFoodId.isOk();
+          return true;
+        }else{
+          error = 'El alimento no existe.';
+        }
+      }else{
+        error = "Se debe seleccionar uno.";
+      }
+
+      this.fishFoodId.setError(error);
       return false;
     },
     /**
@@ -193,8 +276,9 @@ window.fishFoodStockForm = () => {
      */
     validateSubmit() {
       let validations = [];
-      validations.push(this.validateDate());
-      validations.push(this.validateTime());
+      validations.push(this.validateAmount());
+      validations.push(this.validateQuantity());
+      validations.push(this.validateFishFoodId());
 
       //Retorna false si alguna de las validaciones es falsa, pero valida todos los campos
       return !validations.some(val => val === false);
